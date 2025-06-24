@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>LEAVING EARTH</title>
+    <!-- Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD"
+      crossorigin="anonymous"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css"
+      integrity="sha384-b6lVK+yci+bfDmaY1u0zE8YYJt0TZxLEAFyYSLHId4xoVvsrQu3INevFKo+Xir8e"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="context-menu" id="contextMenu"></div>
+
+      <div class="locations-container" id="locations-container" data-ship>
+        <img
+          src="images/locationImages/PhobosUnexplored.jpg"
+          class="PhobosUnexplored location"
+          id="location"
+          name="Phobos"
+          data-row="1"
+          data-column="1"
+        />
+        <img
+          src="images/locationImages/MarsFlyby.jpg"
+          class="MarsFlyby location"
+          name="Mars FlyBy"
+          data-row="1"
+          data-column="2"
+        />
+        <img
+          src="images/locationImages/Ceres-unexplored.jpg"
+          class="Ceres-unexplored location"
+          name="Ceres"
+          data-row="1"
+          data-column="3"
+        />
+        <img
+          src="images/locationImages/VenusOrbit.jpg"
+          class="VenusOrbit location"
+          name="Venus Orbit"
+          data-row="1"
+          data-column="4"
+        />
+        <img
+          src="images/locationImages/VenusUnexplored.jpg"
+          class="VenusUnexplored location"
+          name="Venus"
+          data-row="1"
+          data-column="5"
+        />
+        <img
+          src="images/locationImages/MarsUnexplored.jpg"
+          class="MarsUnexplored location"
+          name="Mars"
+          data-row="2"b
+          data-column="1"
+        />
+        <img
+          src="images/locationImages/LunarOrbit.jpg"
+          class="LunarOrbit location"
+          name="Lunar Orbit"
+          data-row="3"
+          data-column="4"
+        />
+        <img
+          src="images/locationImages/MarsOrbit.jpg"
+          class="MarsOrbit location"
+          name="Mars Orbit"
+          data-row="2"
+          data-column="2"
+        />
+        <img
+          src="images/locationImages/InnerPlanetsTransferWithMercury.jpg"
+          class="InnerPlanetsTransferWithMercury location"
+          name="Inner Planets Transfer"
+          data-row="2"
+          data-column="3"
+        />
+        <img
+          src="images/locationImages/VenusFlyby.jpg"
+          class="VenusFlyby location"
+          name="Venus FlyBy"
+          data-row="2"
+          data-column="4"
+        />
+        <img
+          src="images/locationImages/Earthorbit.jpg"
+          class="Earthorbit location"
+          name="Earth Orbit"
+          data-row="3"
+          data-column="3"
+        />
+        <img
+          src="images/locationImages/MoonUnexplored.jpg"
+          class="MoonUnexplored location"
+          name="Moon"
+          data-row="3"
+          data-column="5"
+        />
+        <img
+          src="images/locationImages/MercuryFlyby.jpg"
+          class="MercuryFlyby location"
+          name="Mercury FlyBy"
+          data-row="4"
+          data-column="1"
+        />
+        <img
+          src="images/locationImages/MercuryOrbit.jpg"
+          class="MercuryOrbit location"
+          name="Mercury Orbit"
+          data-row="4"
+          data-column="2"
+        />
+
+        <img
+          src="images/locationImages/SuborbitalFlightUnexplored.jpg"
+          class="SuborbitalFlightUnexplored location"
+          name="Suborbital Flight"
+          data-row="4"
+          data-column="3"
+        />
+        <img
+          src="images/locationImages/LunarFlyBy.jpg"
+          class="LunarFlyBy location"
+          name="Lunar FlyBy"
+          data-row="4"
+          data-column="4"
+        />
+        <img
+          src="images/locationImages/MercuryUnexplored.jpg"
+          class="MercuryUnexplored location"
+          name="Mercury"
+          data-row="5"
+          data-column="2"
+        />
+        <img
+          src="images/locationImages/Earth.jpg"
+          class="Earth location"
+          name="Earth"
+          data-row="5"
+          data-column="3"
+        />
+        <img
+          src="images/locationImages/SolarRadiationUnexplored.jpg"
+          class="SolarRadiationUnexplored location"
+          name="Solar Radiation"
+        />
+        <div class="buttons-location location">
+          <button
+            class="btn btn-primary create-new-ship-btn"
+            id="create-new-ship-btn"
+          >
+            DOCK NEW SHIP
+          </button>
+          <button
+            class="btn btn-secondary create-new-ship-btn"
+            id="create-new-ship-btn"
+          >
+            ASSEMBLE NEW SHIP
+          </button>
+          <button
+            class="btn btn-success create-new-ship-btn"
+            id="create-new-ship-btn"
+          >
+            CLAIM OBJECTIVE
+          </button>
+        </div>
+
+        <div class="ships-container">
+          
+        </div>
+        
+        <div class="ship-icon-container">
+          <!-- <img
+            src="images/otherImages/nave2.png"
+            id="shipImg"
+            class="shipImg"
+          /> -->
+        </div>
+
+      </div>
+    </div>
+
+    <script src="index.js" type="module"></script>
+  </body>
+</html>

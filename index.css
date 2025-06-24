@@ -1,0 +1,186 @@
+
+
+body {
+  margin: 0;
+}
+
+.wrapper {
+  background-color: #111;
+}
+
+.locations-container {
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-areas:
+    "PhobosUnexplored MarsFlyby CeresUnexplored VenusOrbit VenusUnexplored"
+    "MarsUnexplored MarsOrbit InnerPlanetsTransferWithMercury VenusFlyby ."
+    ". . Earthorbit LunarOrbit MoonUnexplored"
+    "MercuryFlyby MercuryOrbit  SuborbitalFlightUnexplored LunarFlyBy ."
+    "SolarRadiationUnexplored MercuryUnexplored Earth buttons-location .";
+}
+
+.locations-container img {
+  width: 200px;
+  height: 200px;
+  z-index: 1;
+}
+
+.PhobosUnexplored {
+  grid-area: PhobosUnexplored;
+  transform: rotate(90deg);
+}
+
+.MarsFlyby {
+  grid-area: MarsFlyby;
+  transform: rotate(90deg);
+}
+
+.Ceres-unexplored {
+  grid-area: CeresUnexplored;
+}
+
+.VenusOrbit {
+  grid-area: VenusOrbit;
+  transform: rotate(-90deg);
+}
+
+.VenusUnexplored {
+  grid-area: VenusUnexplored;
+  transform: rotate(-90deg);
+}
+
+.MarsUnexplored {
+  grid-area: MarsUnexplored;
+  transform: rotate(90deg);
+}
+
+.MarsOrbit {
+  grid-area: MarsOrbit;
+  transform: rotate(90deg);
+}
+
+.InnerPlanetsTransferWithMercury {
+  grid-area: InnerPlanetsTransferWithMercury;
+}
+
+.VenusFlyby {
+  grid-area: VenusFlyby;
+  transform: rotate(-90deg);
+}
+
+.Earthorbit {
+  grid-area: Earthorbit;
+}
+
+.LunarOrbit {
+  grid-area: LunarOrbit;
+  transform: rotate(-90deg);
+}
+
+.MoonUnexplored {
+  grid-area: MoonUnexplored;
+  transform: rotate(-90deg);
+}
+
+.MercuryFlyby {
+  grid-area: MercuryFlyby;
+}
+
+.MercuryOrbit {
+  grid-area: MercuryOrbit;
+}
+
+.SuborbitalFlightUnexplored {
+  grid-area: SuborbitalFlightUnexplored;
+}
+
+.LunarFlyBy {
+  grid-area: LunarFlyBy;
+  transform: rotate(-90deg);
+}
+
+.MercuryUnexplored {
+  grid-area: MercuryUnexplored;
+}
+
+.Earth {
+  grid-area: Earth;
+}
+
+.SolarRadiationUnexplored {
+  grid-area: SolarRadiationUnexplored;
+}
+
+.buttons-location {
+  grid-area: buttons-location;
+  width: 200px;
+  height: 200px;
+  padding: 10px;
+  z-index: 1;
+}
+
+/* DISPLAY NONE */
+
+.displayNone {
+  display: none;
+}
+
+
+/* SHIP */
+
+.ship-icon-container {
+  grid-row: 5;
+  grid-column: 3;
+  display: grid;
+  margin: auto;
+}
+
+.ship-icon-container img {
+  width: 70px;
+  height: 70px;
+}
+
+/* Context Menu */
+
+.context-menu {
+  color: black;
+  position: absolute;
+  /* border: 1px solid black; */
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.context-menu {
+  padding: 0px;
+  margin: 0;
+  min-width: 250px;
+  list-style: none;
+}
+
+.context-menu li {
+  border-bottom: 1px solid black;
+  font-size: 14px;
+  padding: 3px 5px;
+  background-color: white;
+  margin: 0;
+  list-style: none;
+  border-radius: 8px;
+}
+
+.context-menu li:hover {
+  background-color: rgb(38, 38, 120);
+  color: white;
+  cursor: pointer;
+}
+
+// BUTTON FOR CREATING NEW
+
+.buttons-location {
+  background-color: tomato;
+}
+
+.create-new-ship-btn {
+  top: 100px;
+  bottom: 100px;
+}
