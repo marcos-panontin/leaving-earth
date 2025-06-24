@@ -1,0 +1,82 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Below is a high-level, but concrete, implementation roadmap that turns the paper rulebook into a fully playable, solo, browser-based version of Leaving Earth.
+Each numbered “Phase” ends with a set of success criteria you can test before we move on.
+Where something in the rules is still ambiguous I flag it with ⚠️ so you can clarify before we build that part.
+PHASE 0 – Project bootstrap (1 day)
+Create a mono-repo (pnpm / Yarn workspaces) with:
+React + TypeScript + Vite (fast dev loop)
+State manager: Zustand (simple) or Redux-Toolkit – your call ⚠️
+Tailwind or CSS-modules for styling
+Vitest / React-Testing-Library for unit & component tests
+Copy the existing data files (manuevers.js, components.js).
+Add a git hook or CI lint/test.
+✅ Success when: “npm run dev” shows the blank layout skeleton and tests pass.
+PHASE 1 – Core data modelling (1 day)
+Parse the three card groups into strongly-typed TS modules:
+a) Location & Maneuver graph (from manuevers.js)
+b) Component catalogue (from components.js)
+c) Missions deck (create a JSON file; values transcribed from rulebook appendix – we’ll need that text from you ⚠️).
+Derive helper selectors: getManeuversFrom(location), calcThrustNeeded(mass,diff) etc.
+Unit-test formulae: mass × difficulty, hazard flags, etc.
+✅ Success when: a storybook screen can list “all locations”, “all rockets”, and running tests show thrust math is correct.
+PHASE 2 – Table & card rendering (2 days)
+Design a responsive “table” view: left column = Earth system, centre = inner planets, right = outer – mirrors page 10 diagram.
+Each location card visualises: name, category colour, unexplored/explored face, maneuver arrows (small overlay with diff and hazard icons).
+Generic Card component handles flipping (unexplored → explored) with animation.
+Implement drag-preview shadows (react-dnd) but no game logic yet.
+✅ Success when: user can pan/zoom table, click a location to flip between sides.
+PHASE 3 – Agency & spacecraft builder (3 days)
+“Agency panel” (left sidebar)
+Money, year, score, outcome decks, researched advancements.
+“Component shop” modal: filterable list, cost, purchase button.
+Spacecraft assembly tray: drag components onto a new SpacecraftCard (shows mass, current thrust in rockets onboard, seats/occupants).
+Validate seat limits; show warnings.
+Persist unfinished spacecraft to localStorage.
+✅ Success when: I can buy an Eagle, three Junos, build a craft and see mass = 4, thrust = 12 displayed.
+PHASE 4 – Year lifecycle & turn actions (3 days)
+Implement solo flow: start year → funding → player takes unlimited actions in any order → “End turn” triggers automatic maneuvers.
+Offer buttons for each rulebook action (Research, Buy, Assemble, Maneuver, Dock/Separate, Survey, Collect, Repair, Heal).
+Only “Buy”, “Assemble”, and “Research” wired for now; others disabled.
+✅ Success when: clicking “End Year” advances calendar, resets money to $25, lets me buy components again.
+PHASE 5 – Maneuver engine (4 days)
+Mass/thrust check, rocket discard, ion thruster rules.
+Automatic maneuvers & multi-year time tokens.
+Hazard pipeline exactly in rule order (radiation → move → time tokens → atmosphere → landing → other).
+Outcome draw & resolution for rocket failures.
+UI: modal shows dice rolls/outcome card, ask to pay $5/$10 to remove card.
+✅ Success when: tutorial script reproduces the sample Lunar-Orbit → Moon descent with correct thrust numbers and rocket discard.
+PHASE 6 – Advancement decks & research (2 days)
+Research action: pay $10, create advancement with N random outcome cards (values from rulebook).
+Draw mechanism already exists from Phase 5.
+Ability gating: cannot buy Atlas unless “Atlas Rockets” researched, etc.
+Life-support check at end-of-year.
+✅ Success when: without “Re-entry” advancement, atmospheric entry always kills the Vostok; with it you draw outcomes.
+PHASE 7 – Astronauts, skills & health (2 days)
+Data file for astronauts (name, skill icon).
+Boarding seats, incapacitated state, doctor/mechanic/pilot modifiers.
+End-of-year survival: life-support roll, supplies consumption.
+Sample & supplies card collection.
+✅ Success when: an incapacitated astronaut with a Doctor present is healed for free; mechanic repairs damaged rocket by consuming supplies.
+PHASE 8 – Missions & scoring (2 days)
+Load decks by difficulty, randomise according to chosen difficulty level.
+Detect completion triggers (on-turn, start-year).
+Award points, give $10 bonus to “other agencies” (solo game → no effect).
+Impossible mission removal when location revealed as “Spacecraft Destroyed”.
+End-game detection (1977 reached or all missions done).
+✅ Success when: sending a probe to unexplored Moon location flips card, awards “Survey Moon” mission, adds its points to score.
+PHASE 9 – Polishing & UX (variable)
+Autosave & manual save-slots.
+Undo stack (last whole action).
+Tooltips with rulebook excerpts on every icon.
+Sound & subtle animations (rocket firing, card shuffling).
+Settings: colour-blind, dark mode.
+PWA installable for offline play.
+✅ Success when: you can reload the browser and the game resumes exactly where you left it.
+PHASE 10 – Packaging & documentation
+README with install/run/build instructions.
+PDF/manual link, credits.
+CI deployment to GitHub Pages / Netlify.

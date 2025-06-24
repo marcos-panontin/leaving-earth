@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Hello, your task is to create a digital implementation of the game Leaving earth using react.
+
+The game will be played solo. The rulebook is @rulebook.md .  Some content is missing for the game: 
+
+- the location cards and its information (these can be found on @manuevers.js 
+- the components cards and its information (these can be found on @components.js )
+- the objectives cards and its information (these are currently not shown).
+
+Please analyze the @rulebook.md with extreme care and formulate a plant to create the whole game implementation.
+
+Feel free to divide it by steps, so that I can check each step success.
+
+Feel free to request aditional info. It is important that the rules are correctly applied. Dont create rules when in doubt. Ask.
+
