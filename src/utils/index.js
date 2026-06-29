@@ -120,7 +120,7 @@ function createNewShip() {
     newShipHTML.dataset.currentlocation = 'Earth'
     const newShipImgTag = document.createElement('img');
     newShipImgTag.classList.add('shipImg');
-    newShipImgTag.src = `images/otherImages/nave${Ship.count}.png`;
+    newShipImgTag.src = `/images/otherImages/nave${Ship.count}.png`;
         newShipImgTag.id = `ship${Ship.count}`
 
     newShipHTML.appendChild(newShipImgTag);
