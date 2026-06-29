@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
-import { buyComponent, researchAdvancement } from '@/engine/actions';
+import {
+  assembleSpacecraft,
+  buyComponent,
+  canPerformSpacecraftManeuver,
+  performSpacecraftManeuver,
+  researchAdvancement,
+} from '@/engine/actions';
 import { createInitialState, getRemainingMissionPoints } from '@/engine/setup';
+import { getManeuver } from '@/data/maneuvers';
 
 describe('thrust engine', () => {
   it('calculates thrust required as mass times difficulty', () => {
@@ -37,5 +44,31 @@ describe('setup and actions', () => {
   it('tracks remaining mission points for solo scoring', () => {
     const state = createInitialState('hard');
     expect(getRemainingMissionPoints(state)).toBeGreaterThan(0);
+  });
+
+  it('executes a spacecraft maneuver and expends non-reusable rockets', () => {
+    let state = createInitialState('hard');
+    state = researchAdvancement(state, 'juno');
+    state = buyComponent(state, 'probe');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+
+    const maneuver = getManeuver('earth', 'suborbital-flight');
+    expect(maneuver).toBeDefined();
+
+    const check = canPerformSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(check.ok).toBe(true);
+    expect(check.requiredThrust).toBe(15);
+    expect(check.providedThrust).toBe(16);
+
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(state.spacecraft[0].locationId).toBe('suborbital-flight');
+    expect(state.spacecraft[0].componentInstanceIds).toHaveLength(1);
   });
 });

@@ -1,6 +1,7 @@
 import { AgencyPanel } from '@/components/panels/AgencyPanel';
 import { GameLog } from '@/components/panels/GameLog';
 import { HangarPanel } from '@/components/panels/HangarPanel';
+import { ManeuverPanel } from '@/components/panels/ManeuverPanel';
 import { MissionPanel } from '@/components/panels/MissionPanel';
 import { ShopPanel } from '@/components/panels/ShopPanel';
 import { SolarSystemBoard } from '@/components/board/SolarSystemBoard';
@@ -21,6 +22,7 @@ export default function App() {
 
       <aside className={styles.rightbar}>
         <ShopPanel />
+        <ManeuverPanel />
         <HangarPanel />
       </aside>
     </div>
