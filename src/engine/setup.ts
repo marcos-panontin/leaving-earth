@@ -1,7 +1,13 @@
 import { MISSION_DEFINITIONS, MISSION_DRAW_COUNTS } from '@/data/missions';
 import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { DEFAULT_AGENCY_ID } from '@/data/agencies';
-import type { ActiveMission, GameDifficulty, GameState, RevealedLocation } from '@/engine/types';
+import type {
+  ActiveMission,
+  GameDifficulty,
+  GameState,
+  OutcomeCardType,
+  RevealedLocation,
+} from '@/engine/types';
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -53,6 +59,14 @@ function initialSupplyCounts(): Record<string, number> {
   };
 }
 
+export function createOutcomeDeck(): OutcomeCardType[] {
+  return shuffle<OutcomeCardType>([
+    ...Array.from({ length: 60 }, () => 'success' as const),
+    ...Array.from({ length: 15 }, () => 'minorFailure' as const),
+    ...Array.from({ length: 15 }, () => 'majorFailure' as const),
+  ]);
+}
+
 export function createInitialState(difficulty: GameDifficulty = 'hard'): GameState {
   return {
     phase: 'playing',
@@ -68,6 +82,8 @@ export function createInitialState(difficulty: GameDifficulty = 'hard'): GameSta
     astronauts: [],
     spacecraft: [],
     advancements: [],
+    outcomeDeck: createOutcomeDeck(),
+    outcomeDiscard: [],
     supplyCounts: initialSupplyCounts(),
     log: ['Welcome to Leaving Earth. The Space Race begins in 1956.'],
   };

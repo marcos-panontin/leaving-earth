@@ -36,6 +36,8 @@ describe('setup and actions', () => {
     state = researchAdvancement(state, 'juno');
     expect(state.advancements).toHaveLength(1);
     expect(state.money).toBe(15);
+    expect(state.advancements[0].outcomeCards).toHaveLength(3);
+    expect(state.outcomeDeck.length).toBe(87);
     state = buyComponent(state, 'juno');
     expect(state.inventory).toHaveLength(1);
     expect(state.money).toBe(14);
@@ -49,6 +51,11 @@ describe('setup and actions', () => {
   it('executes a spacecraft maneuver and expends non-reusable rockets', () => {
     let state = createInitialState('hard');
     state = researchAdvancement(state, 'juno');
+    state.advancements = state.advancements.map((advancement) =>
+      advancement.advancementId === 'juno'
+        ? { ...advancement, outcomeCards: ['success', 'success', 'success'] }
+        : advancement,
+    );
     state = buyComponent(state, 'probe');
     state = buyComponent(state, 'juno');
     state = buyComponent(state, 'juno');
@@ -106,5 +113,54 @@ describe('setup and actions', () => {
 
     state = performSpacecraftManeuver(state, craftId, maneuver!.id);
     expect(state.spacecraft.find((craft) => craft.id === craftId)).toBeUndefined();
+  });
+
+  it('uses re-entry outcome cards and destroys on major failure', () => {
+    let state = createInitialState('hard');
+    state = buyComponent(state, 'vostok');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+    state.spacecraft[0].locationId = 'earth-orbit';
+
+    state.advancements.push({
+      advancementId: 'reentry',
+      outcomeCards: ['majorFailure'],
+      revealedOutcomeCards: [],
+    });
+
+    const maneuver = getManeuver('earth-orbit', 'earth');
+    expect(maneuver).toBeDefined();
+
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(state.spacecraft.find((craft) => craft.id === craftId)).toBeUndefined();
+  });
+
+  it('uses landing outcome cards and damages component on minor failure', () => {
+    let state = createInitialState('hard');
+    state = researchAdvancement(state, 'juno');
+    state = buyComponent(state, 'probe');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+    state.spacecraft[0].locationId = 'lunar-orbit';
+
+    state.advancements.push({
+      advancementId: 'landing',
+      outcomeCards: ['minorFailure'],
+      revealedOutcomeCards: [],
+    });
+
+    const maneuver = getManeuver('lunar-orbit', 'moon');
+    expect(maneuver).toBeDefined();
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    const craftAfter = state.spacecraft.find((craft) => craft.id === craftId);
+    expect(craftAfter).toBeDefined();
+    const damagedCount = state.inventory.filter(
+      (item) => item.spacecraftId === craftId && item.damaged,
+    ).length;
+    expect(damagedCount).toBeGreaterThan(0);
   });
 });

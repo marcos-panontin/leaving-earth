@@ -2,12 +2,15 @@ import { ADVANCEMENT_BY_ID, COMPONENT_BY_ID, COMPONENT_SUPPLY_LIMITS } from '@/d
 import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { MANEUVER_DEFINITIONS } from '@/data/maneuvers';
 import { toLocationName } from '@/data/locations';
+import { createOutcomeDeck } from '@/engine/setup';
 import { calculateRocketThrust, calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
 import type {
   AdvancementId,
   ComponentInstance,
   GameState,
   ManeuverDefinition,
+  OutcomeCardType,
+  ResearchedAdvancement,
   Spacecraft,
 } from '@/engine/types';
 
@@ -56,6 +59,130 @@ function getSpacecraftMass(components: ComponentInstance[]): number {
     const def = COMPONENT_BY_ID[component.definitionId];
     return sum + (def?.mass ?? 0);
   }, 0);
+}
+
+const ROCKET_ADVANCEMENT_BY_COMPONENT: Partial<Record<string, AdvancementId>> = {
+  juno: 'juno',
+  atlas: 'atlas',
+  soyuz: 'soyuz',
+  saturn: 'saturn',
+  ion: 'ion',
+};
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function ensureOutcomeDeck(state: GameState): { deck: OutcomeCardType[]; discard: OutcomeCardType[] } {
+  const deck = state.outcomeDeck ?? [];
+  const discard = state.outcomeDiscard ?? [];
+  if (deck.length === 0 && discard.length === 0) {
+    return { deck: createOutcomeDeck(), discard: [] };
+  }
+  return { deck: [...deck], discard: [...discard] };
+}
+
+function drawOutcomeCards(
+  state: GameState,
+  count: number,
+): { state: GameState; drawn: OutcomeCardType[] } {
+  let { deck, discard } = ensureOutcomeDeck(state);
+  const drawn: OutcomeCardType[] = [];
+
+  while (drawn.length < count) {
+    if (deck.length === 0) {
+      if (discard.length === 0) break;
+      deck = shuffle(discard);
+      discard = [];
+    }
+    const card = deck.shift();
+    if (!card) break;
+    drawn.push(card);
+  }
+
+  return {
+    state: {
+      ...state,
+      outcomeDeck: deck,
+      outcomeDiscard: discard,
+    },
+    drawn,
+  };
+}
+
+function gainAdvancementFromDeck(state: GameState, advancementId: AdvancementId): GameState {
+  if (hasAdvancement(state, advancementId)) return state;
+  const definition = ADVANCEMENT_BY_ID[advancementId];
+  const drawn = drawOutcomeCards(state, definition.outcomeCount);
+  return {
+    ...drawn.state,
+    advancements: [
+      ...drawn.state.advancements,
+      {
+        advancementId,
+        outcomeCards: drawn.drawn,
+        revealedOutcomeCards: [],
+      },
+    ],
+  };
+}
+
+function drawAdvancementOutcome(
+  state: GameState,
+  advancementId: AdvancementId,
+): { state: GameState; outcome: OutcomeCardType | 'autoSuccess'; autoResearched: boolean } {
+  let nextState = state;
+  let autoResearched = false;
+  if (!hasAdvancement(nextState, advancementId)) {
+    nextState = gainAdvancementFromDeck(nextState, advancementId);
+    autoResearched = true;
+  }
+
+  const index = nextState.advancements.findIndex(
+    (advancement) => advancement.advancementId === advancementId,
+  );
+  if (index === -1) {
+    return { state: nextState, outcome: 'autoSuccess', autoResearched };
+  }
+
+  const advancement = nextState.advancements[index];
+  if (advancement.outcomeCards.length === 0) {
+    return { state: nextState, outcome: 'autoSuccess', autoResearched };
+  }
+
+  const randomIndex = Math.floor(Math.random() * advancement.outcomeCards.length);
+  const outcome = advancement.outcomeCards[randomIndex];
+
+  const updatedAdvancement: ResearchedAdvancement = {
+    ...advancement,
+    revealedOutcomeCards: [...advancement.revealedOutcomeCards, outcome],
+  };
+
+  // Rulebook: if only one success remains, it may be removed for free.
+  if (advancement.outcomeCards.length === 1 && outcome === 'success') {
+    updatedAdvancement.outcomeCards = [];
+    nextState = {
+      ...nextState,
+      outcomeDiscard: [...(nextState.outcomeDiscard ?? []), outcome],
+    };
+  }
+
+  const advancements = [...nextState.advancements];
+  advancements[index] = updatedAdvancement;
+
+  return {
+    state: {
+      ...nextState,
+      advancements,
+    },
+    outcome,
+    autoResearched,
+  };
 }
 
 function rollD8(): number {
@@ -199,19 +326,98 @@ export function performSpacecraftManeuver(
     };
   }
 
-  const craftComponents = getSpacecraftComponents(state, spacecraftId);
-  const consumedRocketIds = maneuver.exclamation
-    ? []
-    : craftComponents
-        .filter((component) => {
-          const def = COMPONENT_BY_ID[component.definitionId];
-          return Boolean(def && def.type === 'rocket' && !def.isReusable && !component.damaged && def.thrust > 0);
-        })
-        .map((component) => component.instanceId);
+  let nextState = state;
+  const craftComponents = getSpacecraftComponents(nextState, spacecraftId);
+  let consumedRocketIds: string[] = [];
+  let damagedRocketIds: string[] = [];
+  let providedThrust = 0;
 
-  let inventory = state.inventory.filter((item) => !consumedRocketIds.includes(item.instanceId));
+  if (!maneuver.exclamation) {
+    const rocketComponents = craftComponents.filter((component) => {
+      const definition = COMPONENT_BY_ID[component.definitionId];
+      return Boolean(definition && definition.type === 'rocket' && !component.damaged);
+    });
 
-  let spacecraft = state.spacecraft.map((entry) => {
+    for (const rocket of rocketComponents) {
+      const definition = COMPONENT_BY_ID[rocket.definitionId];
+      if (!definition) continue;
+
+      const advancementId = ROCKET_ADVANCEMENT_BY_COMPONENT[definition.id];
+      if (advancementId) {
+        const draw = drawAdvancementOutcome(nextState, advancementId);
+        nextState = draw.state;
+        if (draw.autoResearched) {
+          nextState = {
+            ...nextState,
+            log: log(nextState, `${craft.name} auto-gained ${ADVANCEMENT_BY_ID[advancementId].name} before firing.`),
+          };
+        }
+
+        if (draw.outcome === 'majorFailure') {
+          const destroyed = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+          nextState = {
+            ...nextState,
+            ...destroyed,
+            log: log(nextState, `${definition.name} major failure: ${craft.name} destroyed during launch.`),
+          };
+          return nextState;
+        }
+        if (draw.outcome === 'minorFailure') {
+          damagedRocketIds.push(rocket.instanceId);
+          nextState = {
+            ...nextState,
+            log: log(nextState, `${definition.name} minor failure: rocket damaged, no thrust generated.`),
+          };
+          continue;
+        }
+      }
+
+      const thrustFromRocket = definition.isReusable
+        ? definition.thrust * Math.max(1, maneuver.hourglasses)
+        : definition.thrust;
+      providedThrust += thrustFromRocket;
+
+      if (!definition.isReusable) {
+        consumedRocketIds.push(rocket.instanceId);
+      }
+    }
+
+    const required = calculateThrustNeeded(check.mass, maneuver);
+    if (providedThrust < required) {
+      const inventoryAfterFailure = nextState.inventory
+        .filter((item) => !consumedRocketIds.includes(item.instanceId))
+        .map((item) =>
+          damagedRocketIds.includes(item.instanceId) ? { ...item, damaged: true } : item,
+        );
+
+      const spacecraftAfterFailure = nextState.spacecraft.map((entry) =>
+        entry.id !== spacecraftId
+          ? entry
+          : {
+              ...entry,
+              componentInstanceIds: entry.componentInstanceIds.filter(
+                (id) => !consumedRocketIds.includes(id),
+              ),
+            },
+      );
+
+      return {
+        ...nextState,
+        inventory: inventoryAfterFailure,
+        spacecraft: spacecraftAfterFailure,
+        log: log(
+          nextState,
+          `${craft.name} failed to maneuver: thrust ${providedThrust}/${required} after outcomes.`,
+        ),
+      };
+    }
+  }
+
+  let inventory = nextState.inventory
+    .filter((item) => !consumedRocketIds.includes(item.instanceId))
+    .map((item) => (damagedRocketIds.includes(item.instanceId) ? { ...item, damaged: true } : item));
+
+  let spacecraft = nextState.spacecraft.map((entry) => {
     if (entry.id !== spacecraftId) return entry;
     return {
       ...entry,
@@ -223,13 +429,16 @@ export function performSpacecraftManeuver(
 
   const thrustLog = maneuver.exclamation
     ? 'automatic maneuver'
-    : `mass ${check.mass}, thrust ${check.providedThrust}/${check.requiredThrust}`;
+    : `mass ${check.mass}, thrust ${providedThrust}/${check.requiredThrust}`;
   const spentLog = consumedRocketIds.length > 0 ? `; expended ${consumedRocketIds.length} rocket(s)` : '';
-  let nextState: GameState = {
-    ...state,
+  nextState = {
+    ...nextState,
     inventory,
     spacecraft,
-    log: log(state, `${craft.name} maneuvered ${toLocationName(maneuver.from)} → ${toLocationName(maneuver.to)} (${thrustLog}${spentLog}).`),
+    log: log(
+      nextState,
+      `${craft.name} maneuvered ${toLocationName(maneuver.from)} → ${toLocationName(maneuver.to)} (${thrustLog}${spentLog}).`,
+    ),
   };
 
   if (maneuver.solarRadiation) {
@@ -265,8 +474,10 @@ export function performSpacecraftManeuver(
   }
 
   if (maneuver.reentry) {
-    const craftComponents = getSpacecraftComponents(nextState, spacecraftId);
-    const capsules = craftComponents.filter((component) => COMPONENT_BY_ID[component.definitionId]?.type === 'capsule');
+    const currentComponents = getSpacecraftComponents(nextState, spacecraftId);
+    const capsules = currentComponents.filter(
+      (component) => COMPONENT_BY_ID[component.definitionId]?.type === 'capsule',
+    );
     if (capsules.length > 0) {
       if (!hasAdvancement(nextState, 'reentry')) {
         const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
@@ -278,29 +489,40 @@ export function performSpacecraftManeuver(
         return nextState;
       }
 
-      const roll = rollD8();
-      if (roll <= 2) {
+      const draw = drawAdvancementOutcome(nextState, 'reentry');
+      nextState = draw.state;
+      if (draw.outcome === 'majorFailure') {
         const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
         nextState = {
           ...nextState,
           ...result,
-          log: log(nextState, `Re-entry major failure (roll ${roll}): ${craft.name} destroyed.`),
+          log: log(nextState, `Re-entry major failure: ${craft.name} destroyed.`),
         };
         return nextState;
       }
-
-      if (roll <= 4) {
-        const damaged = damageFirstUndamagedComponent(nextState.inventory, spacecraftId);
-        nextState = {
-          ...nextState,
-          inventory: damaged.inventory,
-          log: log(nextState, `Re-entry minor failure (roll ${roll}): component damaged.`),
-        };
-      } else {
-        nextState = {
-          ...nextState,
-          log: log(nextState, `Re-entry success (roll ${roll}).`),
-        };
+      if (draw.outcome === 'minorFailure') {
+        const capsuleToDamage = nextState.inventory.find(
+          (component) =>
+            component.spacecraftId === spacecraftId &&
+            COMPONENT_BY_ID[component.definitionId]?.type === 'capsule' &&
+            !component.damaged,
+        );
+        if (capsuleToDamage) {
+          nextState = {
+            ...nextState,
+            inventory: nextState.inventory.map((component) =>
+              component.instanceId === capsuleToDamage.instanceId
+                ? { ...component, damaged: true }
+                : component,
+            ),
+            log: log(nextState, `Re-entry minor failure: capsule damaged.`),
+          };
+        } else {
+          nextState = { ...nextState, log: log(nextState, 'Re-entry minor failure: no undamaged capsule to damage.') };
+        }
+      }
+      if (draw.outcome === 'success' || draw.outcome === 'autoSuccess') {
+        nextState = { ...nextState, log: log(nextState, 'Re-entry outcome: success.') };
       }
     }
   }
@@ -316,27 +538,30 @@ export function performSpacecraftManeuver(
       return nextState;
     }
 
-    const roll = rollD8();
-    if (roll <= 2) {
+    const draw = drawAdvancementOutcome(nextState, 'landing');
+    nextState = draw.state;
+
+    if (draw.outcome === 'majorFailure') {
       const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
       nextState = {
         ...nextState,
         ...result,
-        log: log(nextState, `Landing major failure (roll ${roll}): spacecraft destroyed.`),
+        log: log(nextState, `Landing major failure: spacecraft destroyed.`),
       };
       return nextState;
     }
-    if (roll <= 4) {
+    if (draw.outcome === 'minorFailure') {
       const damaged = damageFirstUndamagedComponent(nextState.inventory, spacecraftId);
       nextState = {
         ...nextState,
         inventory: damaged.inventory,
-        log: log(nextState, `Landing minor failure (roll ${roll}): component damaged.`),
+        log: log(nextState, `Landing minor failure: component damaged.`),
       };
-    } else {
+    }
+    if (draw.outcome === 'success' || draw.outcome === 'autoSuccess') {
       nextState = {
         ...nextState,
-        log: log(nextState, `Landing success (roll ${roll}).`),
+        log: log(nextState, 'Landing outcome: success.'),
       };
     }
   }
@@ -402,18 +627,19 @@ export function researchAdvancement(state: GameState, advancementId: Advancement
   if (!check.ok) return state;
 
   const def = ADVANCEMENT_BY_ID[advancementId];
+  const outcomeDraw = drawOutcomeCards(state, def.outcomeCount);
   return {
-    ...state,
-    money: state.money - def.researchCost,
+    ...outcomeDraw.state,
+    money: outcomeDraw.state.money - def.researchCost,
     advancements: [
-      ...state.advancements,
+      ...outcomeDraw.state.advancements,
       {
         advancementId,
-        outcomeCardIds: Array.from({ length: def.outcomeCount }, (_, i) => `${advancementId}-outcome-${i}`),
-        revealedOutcomeIds: [],
+        outcomeCards: outcomeDraw.drawn,
+        revealedOutcomeCards: [],
       },
     ],
-    log: log(state, `Researched ${def.name} for $${def.researchCost}.`),
+    log: log(outcomeDraw.state, `Researched ${def.name} for $${def.researchCost}.`),
   };
 }
 
