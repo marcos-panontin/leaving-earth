@@ -1,14 +1,17 @@
 import { ADVANCEMENT_BY_ID, COMPONENT_BY_ID, COMPONENT_SUPPLY_LIMITS } from '@/data/components';
 import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { MANEUVER_DEFINITIONS } from '@/data/maneuvers';
+import { MISSION_BY_ID } from '@/data/missions';
 import { toLocationName } from '@/data/locations';
 import { createOutcomeDeck } from '@/engine/setup';
 import { calculateRocketThrust, calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
 import type {
+  ActiveMission,
   AdvancementId,
   ComponentInstance,
   GameState,
   ManeuverDefinition,
+  MissionDefinition,
   OutcomeCardType,
   ResearchedAdvancement,
   Spacecraft,
@@ -247,6 +250,131 @@ function revealExplorableIfNeeded(state: GameState, destinationId: string): { st
   };
 }
 
+function hasUndamagedProbeOrCapsuleOnCraft(state: GameState, spacecraftId: string): boolean {
+  return state.inventory.some((component) => {
+    if (component.spacecraftId !== spacecraftId || component.damaged) return false;
+    const definition = COMPONENT_BY_ID[component.definitionId];
+    return Boolean(definition && (definition.type === 'probe' || definition.type === 'capsule'));
+  });
+}
+
+function hasHealthyAstronautOnCraft(state: GameState, spacecraftId: string): boolean {
+  return state.astronauts.some(
+    (astronaut) => astronaut.spacecraftId === spacecraftId && !astronaut.incapacitated,
+  );
+}
+
+function getRevealedVariantType(state: GameState, locationId: string): string | null {
+  const revealed = state.revealedLocations.find(
+    (location) => location.locationId === locationId && location.revealed,
+  );
+  if (!revealed) return null;
+  const definition = EXPLORABLE_LOCATIONS.find((location) => location.id === locationId);
+  const variant = definition?.variants.find((item) => item.id === revealed.variantId);
+  return variant?.type ?? null;
+}
+
+function isMissionImpossible(state: GameState, mission: MissionDefinition): boolean {
+  if (!mission.targetLocation) return false;
+  if (!['probe', 'sampleReturn', 'manned', 'spaceStation'].includes(mission.type)) return false;
+
+  // "Sounding Rocket" and "Artificial Satellite" are not tied to explorable locations.
+  if (mission.id === 'sounding-rocket' || mission.id === 'artificial-satellite') return false;
+
+  const variantType = getRevealedVariantType(state, mission.targetLocation);
+  return variantType === 'destroyed';
+}
+
+function isMissionCompleted(state: GameState, mission: MissionDefinition): boolean {
+  if (mission.id === 'sounding-rocket') {
+    return state.spacecraft.some(
+      (craft) => craft.locationId !== 'earth' && hasUndamagedProbeOrCapsuleOnCraft(state, craft.id),
+    );
+  }
+
+  if (mission.id === 'artificial-satellite') {
+    return state.spacecraft.some(
+      (craft) =>
+        craft.locationId === 'earth-orbit' && hasUndamagedProbeOrCapsuleOnCraft(state, craft.id),
+    );
+  }
+
+  if (mission.type === 'survey' && mission.targetLocation) {
+    return Boolean(
+      state.revealedLocations.find(
+        (location) =>
+          location.locationId === mission.targetLocation && location.revealed,
+      ),
+    );
+  }
+
+  if (mission.type === 'probe' && mission.targetLocation) {
+    return state.spacecraft.some(
+      (craft) =>
+        craft.locationId === mission.targetLocation &&
+        hasUndamagedProbeOrCapsuleOnCraft(state, craft.id),
+    );
+  }
+
+  if (mission.type === 'spaceStation' && mission.targetLocation) {
+    return state.spacecraft.some(
+      (craft) =>
+        craft.locationId === mission.targetLocation &&
+        hasHealthyAstronautOnCraft(state, craft.id),
+    );
+  }
+
+  if (mission.type === 'spaceStation') {
+    return state.spacecraft.some(
+      (craft) => craft.locationId !== 'earth' && hasHealthyAstronautOnCraft(state, craft.id),
+    );
+  }
+
+  return false;
+}
+
+function updateMissionState(
+  state: GameState,
+  trigger: 'onTurn' | 'startOfYear',
+): GameState {
+  let nextState = state;
+  let missionsChanged = false;
+  const missions: ActiveMission[] = [...nextState.missions];
+
+  for (let index = 0; index < missions.length; index += 1) {
+    const missionSlot = missions[index];
+    if (missionSlot.completed || missionSlot.removed) continue;
+
+    const mission = MISSION_BY_ID[missionSlot.definitionId];
+    if (!mission) continue;
+
+    if (isMissionImpossible(nextState, mission)) {
+      missions[index] = { ...missionSlot, removed: true };
+      missionsChanged = true;
+      nextState = {
+        ...nextState,
+        missions,
+        log: log(nextState, `${mission.name} removed: impossible with revealed conditions.`),
+      };
+      continue;
+    }
+
+    if (mission.trigger !== trigger) continue;
+    if (!isMissionCompleted(nextState, mission)) continue;
+
+    missions[index] = { ...missionSlot, completed: true };
+    missionsChanged = true;
+    nextState = {
+      ...nextState,
+      missions,
+      score: nextState.score + mission.points,
+      log: log(nextState, `Mission completed: ${mission.name} (+${mission.points} points).`),
+    };
+  }
+
+  return missionsChanged ? nextState : state;
+}
+
 export interface ManeuverCheck {
   ok: boolean;
   reason?: string;
@@ -360,7 +488,7 @@ export function performSpacecraftManeuver(
             ...destroyed,
             log: log(nextState, `${definition.name} major failure: ${craft.name} destroyed during launch.`),
           };
-          return nextState;
+          return updateMissionState(nextState, 'onTurn');
         }
         if (draw.outcome === 'minorFailure') {
           damagedRocketIds.push(rocket.instanceId);
@@ -401,7 +529,7 @@ export function performSpacecraftManeuver(
             },
       );
 
-      return {
+      nextState = {
         ...nextState,
         inventory: inventoryAfterFailure,
         spacecraft: spacecraftAfterFailure,
@@ -410,6 +538,7 @@ export function performSpacecraftManeuver(
           `${craft.name} failed to maneuver: thrust ${providedThrust}/${required} after outcomes.`,
         ),
       };
+      return updateMissionState(nextState, 'onTurn');
     }
   }
 
@@ -486,7 +615,7 @@ export function performSpacecraftManeuver(
           ...result,
           log: log(nextState, `${craft.name} was destroyed during re-entry (Re-entry advancement missing).`),
         };
-        return nextState;
+        return updateMissionState(nextState, 'onTurn');
       }
 
       const draw = drawAdvancementOutcome(nextState, 'reentry');
@@ -498,7 +627,7 @@ export function performSpacecraftManeuver(
           ...result,
           log: log(nextState, `Re-entry major failure: ${craft.name} destroyed.`),
         };
-        return nextState;
+        return updateMissionState(nextState, 'onTurn');
       }
       if (draw.outcome === 'minorFailure') {
         const capsuleToDamage = nextState.inventory.find(
@@ -535,7 +664,7 @@ export function performSpacecraftManeuver(
         ...result,
         log: log(nextState, `${craft.name} was destroyed landing (Landing advancement missing).`),
       };
-      return nextState;
+      return updateMissionState(nextState, 'onTurn');
     }
 
     const draw = drawAdvancementOutcome(nextState, 'landing');
@@ -548,7 +677,7 @@ export function performSpacecraftManeuver(
         ...result,
         log: log(nextState, `Landing major failure: spacecraft destroyed.`),
       };
-      return nextState;
+      return updateMissionState(nextState, 'onTurn');
     }
     if (draw.outcome === 'minorFailure') {
       const damaged = damageFirstUndamagedComponent(nextState.inventory, spacecraftId);
@@ -575,7 +704,7 @@ export function performSpacecraftManeuver(
     };
   }
 
-  return nextState;
+  return updateMissionState(nextState, 'onTurn');
 }
 
 export function canBuyComponent(state: GameState, componentId: string): { ok: boolean; reason?: string } {
@@ -718,7 +847,7 @@ export function endYear(state: GameState): GameState {
     timeTokens: Math.max(0, craft.timeTokens - 1),
   }));
 
-  return {
+  const nextState: GameState = {
     ...state,
     phase: 'playing',
     year: state.year + 1,
@@ -728,6 +857,8 @@ export function endYear(state: GameState): GameState {
     spacecraft,
     log: log(state, `Year ${state.year + 1} begins. Funding replenished to $25.`),
   };
+
+  return updateMissionState(nextState, 'startOfYear');
 }
 
 export { COMPONENT_SUPPLY_LIMITS };

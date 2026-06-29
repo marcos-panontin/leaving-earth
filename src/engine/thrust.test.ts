@@ -4,6 +4,7 @@ import {
   assembleSpacecraft,
   buyComponent,
   canPerformSpacecraftManeuver,
+  endYear,
   performSpacecraftManeuver,
   researchAdvancement,
 } from '@/engine/actions';
@@ -162,5 +163,46 @@ describe('setup and actions', () => {
       (item) => item.spacecraftId === craftId && item.damaged,
     ).length;
     expect(damagedCount).toBeGreaterThan(0);
+  });
+
+  it('auto-completes sounding rocket mission and awards points', () => {
+    let state = createInitialState('hard');
+    state.missions = [{ definitionId: 'sounding-rocket', completed: false, removed: false }];
+    state.score = 0;
+
+    state = researchAdvancement(state, 'juno');
+    state.advancements = state.advancements.map((advancement) =>
+      advancement.advancementId === 'juno'
+        ? { ...advancement, outcomeCards: ['success', 'success', 'success'] }
+        : advancement,
+    );
+    state = buyComponent(state, 'probe');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+    const maneuver = getManeuver('earth', 'suborbital-flight');
+    expect(maneuver).toBeDefined();
+
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(state.score).toBe(1);
+    expect(state.missions[0].completed).toBe(true);
+  });
+
+  it('removes impossible mission when location is revealed destroyed', () => {
+    let state = createInitialState('hard');
+    state.missions = [{ definitionId: 'venus-lander', completed: false, removed: false }];
+    state.revealedLocations = state.revealedLocations.map((location) =>
+      location.locationId === 'venus'
+        ? { ...location, revealed: true, variantId: 'venus-destroyed-1' }
+        : location,
+    );
+
+    state = endYear(state);
+    expect(state.missions[0].removed).toBe(true);
   });
 });
