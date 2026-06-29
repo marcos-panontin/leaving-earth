@@ -1,0 +1,27 @@
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: 1rem;
+  padding: 1rem;
+  background: #020617;
+  color: #f8fafc;
+}
+
+.sidebar,
+.rightbar,
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.main {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" role="img" aria-label="Vostok">
+  <rect width="120" height="160" rx="8" fill="#1f2937" stroke="#e5e7eb" stroke-width="2"/>
+  <text x="60" y="72" text-anchor="middle" font-size="14" font-family="system-ui,sans-serif" fill="#f8fafc">Vostok</text>
+  <text x="60" y="92" text-anchor="middle" font-size="10" font-family="system-ui,sans-serif" fill="#e5e7eb">capsule</text>
+  <text x="60" y="140" text-anchor="middle" font-size="9" font-family="system-ui,sans-serif" fill="#cbd5e1">placeholder</text>
+</svg>

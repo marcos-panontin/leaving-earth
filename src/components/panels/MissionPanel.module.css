@@ -1,0 +1,52 @@
+.panel {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #111827;
+  border: 1px solid #334155;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.panel li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.75rem;
+  align-items: start;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #0f172a;
+}
+
+.panel p {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.points {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.unverified {
+  grid-column: 1 / -1;
+  font-size: 0.65rem;
+  color: #f97316;
+  text-transform: uppercase;
+}
+
+.done { opacity: 0.45; text-decoration: line-through; }
+.removed { opacity: 0.35; }

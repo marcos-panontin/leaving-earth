@@ -1,0 +1,55 @@
+.panel {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #111827;
+  border: 1px solid #334155;
+}
+
+.panel h2,
+.section h3 {
+  margin: 0 0 0.75rem;
+}
+
+.section + .section {
+  margin-top: 1rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button,
+.buy {
+  border: 1px solid #475569;
+  border-radius: 0.45rem;
+  background: #1f2937;
+  color: #e2e8f0;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.actions button:disabled,
+.buy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stock {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}

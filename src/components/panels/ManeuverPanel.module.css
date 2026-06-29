@@ -1,0 +1,108 @@
+.panel {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #111827;
+  border: 1px solid #334155;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.caption {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.label select {
+  border: 1px solid #475569;
+  border-radius: 0.45rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.45rem 0.55rem;
+}
+
+.craftInfo {
+  margin: 0.8rem 0 0.6rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.routeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.route {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #0f172a;
+}
+
+.routeMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.routeMeta strong {
+  font-size: 0.82rem;
+}
+
+.routeMeta span {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.reason {
+  color: #f97316 !important;
+}
+
+.route button {
+  border: 1px solid #475569;
+  border-radius: 0.45rem;
+  background: #1f2937;
+  color: #e2e8f0;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.route button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
