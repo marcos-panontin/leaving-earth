@@ -4,7 +4,9 @@ import type { AdvancementId, GameDifficulty, GameState } from '@/engine/types';
 import {
   assembleSpacecraft,
   buyComponent,
+  canCollectSample,
   canPerformSpacecraftManeuver,
+  collectSample,
   disassembleSpacecraft,
   endYear,
   performSpacecraftManeuver,
@@ -27,6 +29,8 @@ interface GameStore {
   disassemble: (spacecraftId: string) => void;
   performManeuver: (maneuverId: string) => void;
   canManeuver: (maneuverId: string) => ReturnType<typeof canPerformSpacecraftManeuver>;
+  collectSample: () => void;
+  canCollectSample: () => ReturnType<typeof canCollectSample>;
   advanceYear: () => void;
 }
 
@@ -107,6 +111,22 @@ export const useGameStore = create<GameStore>()(
           };
         }
         return canPerformSpacecraftManeuver(state, selectedSpacecraftId, maneuverId);
+      },
+
+      collectSample: () => {
+        const { selectedSpacecraftId } = get();
+        if (!selectedSpacecraftId) return;
+        set((store) => ({
+          state: collectSample(store.state, selectedSpacecraftId),
+        }));
+      },
+
+      canCollectSample: () => {
+        const { state, selectedSpacecraftId } = get();
+        if (!selectedSpacecraftId) {
+          return { ok: false, reason: 'Select a spacecraft first.' };
+        }
+        return canCollectSample(state, selectedSpacecraftId);
       },
 
       advanceYear: () => {

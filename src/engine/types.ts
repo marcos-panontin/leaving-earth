@@ -127,6 +127,7 @@ export interface ComponentInstance {
   damaged: boolean;
   location: 'supply' | 'inventory' | 'spacecraft';
   spacecraftId?: string;
+  sampleSourceLocationId?: string;
 }
 
 export interface AstronautInstance {

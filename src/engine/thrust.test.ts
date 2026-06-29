@@ -3,10 +3,12 @@ import { calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
 import {
   assembleSpacecraft,
   buyComponent,
+  collectSample,
   canPerformSpacecraftManeuver,
   endYear,
   performSpacecraftManeuver,
   researchAdvancement,
+  resolveMissionChecks,
 } from '@/engine/actions';
 import { createInitialState, getRemainingMissionPoints } from '@/engine/setup';
 import { getManeuver } from '@/data/maneuvers';
@@ -98,6 +100,11 @@ describe('setup and actions', () => {
   it('destroys spacecraft on landing without landing advancement', () => {
     let state = createInitialState('hard');
     state = researchAdvancement(state, 'juno');
+    state.advancements = state.advancements.map((advancement) =>
+      advancement.advancementId === 'juno'
+        ? { ...advancement, outcomeCards: ['success', 'success', 'success'] }
+        : advancement,
+    );
     state = buyComponent(state, 'probe');
     state = buyComponent(state, 'juno');
     state = buyComponent(state, 'juno');
@@ -140,6 +147,11 @@ describe('setup and actions', () => {
   it('uses landing outcome cards and damages component on minor failure', () => {
     let state = createInitialState('hard');
     state = researchAdvancement(state, 'juno');
+    state.advancements = state.advancements.map((advancement) =>
+      advancement.advancementId === 'juno'
+        ? { ...advancement, outcomeCards: ['success', 'success', 'success'] }
+        : advancement,
+    );
     state = buyComponent(state, 'probe');
     state = buyComponent(state, 'juno');
     state = buyComponent(state, 'juno');
@@ -204,5 +216,33 @@ describe('setup and actions', () => {
 
     state = endYear(state);
     expect(state.missions[0].removed).toBe(true);
+  });
+
+  it('collects sample and completes matching sample return mission on Earth', () => {
+    let state = createInitialState('hard');
+    state.missions = [{ definitionId: 'lunar-sample-return', completed: false, removed: false }];
+    state.score = 0;
+
+    state = buyComponent(state, 'probe');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+
+    state.spacecraft[0].locationId = 'moon';
+    state.revealedLocations = state.revealedLocations.map((location) =>
+      location.locationId === 'moon'
+        ? { ...location, revealed: true, variantId: 'moon-empty-1' }
+        : location,
+    );
+
+    state = collectSample(state, craftId);
+    const sample = state.inventory.find((item) => item.definitionId === 'sample');
+    expect(sample).toBeDefined();
+    expect(sample?.sampleSourceLocationId).toBe('moon');
+
+    state.spacecraft[0].locationId = 'earth';
+    state = resolveMissionChecks(state, 'onTurn');
+    expect(state.missions[0].completed).toBe(true);
+    expect(state.score).toBe(10);
   });
 });

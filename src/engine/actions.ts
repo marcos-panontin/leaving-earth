@@ -72,6 +72,14 @@ const ROCKET_ADVANCEMENT_BY_COMPONENT: Partial<Record<string, AdvancementId>> = 
   ion: 'ion',
 };
 
+const SAMPLEABLE_LOCATION_IDS = new Set([
+  'moon',
+  'mars',
+  'venus',
+  'ceres',
+  'phobos',
+]);
+
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -264,6 +272,14 @@ function hasHealthyAstronautOnCraft(state: GameState, spacecraftId: string): boo
   );
 }
 
+function isSampleComponentOnEarth(state: GameState, component: ComponentInstance): boolean {
+  if (component.definitionId !== 'sample') return false;
+  if (component.location === 'inventory') return true;
+  if (component.location !== 'spacecraft' || !component.spacecraftId) return false;
+  const craft = getSpacecraft(state, component.spacecraftId);
+  return craft?.locationId === 'earth';
+}
+
 function getRevealedVariantType(state: GameState, locationId: string): string | null {
   const revealed = state.revealedLocations.find(
     (location) => location.locationId === locationId && location.revealed,
@@ -314,6 +330,24 @@ function isMissionCompleted(state: GameState, mission: MissionDefinition): boole
         craft.locationId === mission.targetLocation &&
         hasUndamagedProbeOrCapsuleOnCraft(state, craft.id),
     );
+  }
+
+  if (mission.type === 'sampleReturn' && mission.targetLocation) {
+    return state.inventory.some(
+      (component) =>
+        component.definitionId === 'sample' &&
+        component.sampleSourceLocationId === mission.targetLocation &&
+        isSampleComponentOnEarth(state, component),
+    );
+  }
+
+  if (mission.type === 'extraterrestrialLife') {
+    return state.inventory.some((component) => {
+      if (component.definitionId !== 'sample' || !component.sampleSourceLocationId) return false;
+      if (!isSampleComponentOnEarth(state, component)) return false;
+      const variantType = getRevealedVariantType(state, component.sampleSourceLocationId);
+      return variantType === 'life';
+    });
   }
 
   if (mission.type === 'spaceStation' && mission.targetLocation) {
@@ -373,6 +407,10 @@ function updateMissionState(
   }
 
   return missionsChanged ? nextState : state;
+}
+
+export function resolveMissionChecks(state: GameState, trigger: 'onTurn' | 'startOfYear'): GameState {
+  return updateMissionState(state, trigger);
 }
 
 export interface ManeuverCheck {
@@ -435,6 +473,70 @@ export function canPerformSpacecraftManeuver(
   }
 
   return { ok: true, requiredThrust, providedThrust, mass };
+}
+
+export interface SampleCheck {
+  ok: boolean;
+  reason?: string;
+}
+
+export function canCollectSample(state: GameState, spacecraftId: string): SampleCheck {
+  const craft = getSpacecraft(state, spacecraftId);
+  if (!craft) return { ok: false, reason: 'Unknown spacecraft.' };
+  if (craft.timeTokens > 0) {
+    return { ok: false, reason: 'Spacecraft is still in transit (time tokens remain).' };
+  }
+  if (!SAMPLEABLE_LOCATION_IDS.has(craft.locationId)) {
+    return { ok: false, reason: 'Samples can only be collected on solid bodies.' };
+  }
+
+  const revealed = state.revealedLocations.find((entry) => entry.locationId === craft.locationId);
+  if (revealed && !revealed.revealed) {
+    return { ok: false, reason: 'Location must be explored before sampling.' };
+  }
+
+  const hasCollector =
+    hasUndamagedProbeOrCapsuleOnCraft(state, spacecraftId) ||
+    hasHealthyAstronautOnCraft(state, spacecraftId);
+  if (!hasCollector) {
+    return { ok: false, reason: 'Need undamaged probe/capsule or healthy astronaut to collect sample.' };
+  }
+
+  return { ok: true };
+}
+
+export function collectSample(state: GameState, spacecraftId: string): GameState {
+  const check = canCollectSample(state, spacecraftId);
+  const craft = getSpacecraft(state, spacecraftId);
+  if (!craft) return state;
+  if (!check.ok) {
+    return {
+      ...state,
+      log: log(state, `${craft.name} could not collect sample: ${check.reason ?? 'Invalid action.'}`),
+    };
+  }
+
+  const sample: ComponentInstance = {
+    instanceId: nextId('sample'),
+    definitionId: 'sample',
+    damaged: false,
+    location: 'spacecraft',
+    spacecraftId,
+    sampleSourceLocationId: craft.locationId,
+  };
+
+  const nextState: GameState = {
+    ...state,
+    inventory: [...state.inventory, sample],
+    spacecraft: state.spacecraft.map((entry) =>
+      entry.id !== spacecraftId
+        ? entry
+        : { ...entry, componentInstanceIds: [...entry.componentInstanceIds, sample.instanceId] },
+    ),
+    log: log(state, `${craft.name} collected a sample at ${toLocationName(craft.locationId)}.`),
+  };
+
+  return updateMissionState(nextState, 'onTurn');
 }
 
 export function performSpacecraftManeuver(
