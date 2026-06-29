@@ -136,6 +136,7 @@ export interface AstronautInstance {
   incapacitated: boolean;
   spacecraftId?: string;
   capsuleInstanceId?: string;
+  visitedLocationIds: string[];
 }
 
 export interface Spacecraft {

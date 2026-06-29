@@ -3,15 +3,21 @@ import { persist } from 'zustand/middleware';
 import type { AdvancementId, GameDifficulty, GameState } from '@/engine/types';
 import {
   assembleSpacecraft,
+  boardAstronaut,
   buyComponent,
   canCollectSample,
+  canBoardAstronaut,
+  canRecruitAstronaut,
+  canUnboardAstronaut,
   canPerformSpacecraftManeuver,
   collectSample,
   disassembleSpacecraft,
   endYear,
   performSpacecraftManeuver,
+  recruitAstronaut,
   researchAdvancement,
   resetIdCounter,
+  unboardAstronaut,
 } from '@/engine/actions';
 import { createInitialState, isGameOver, isSoloVictory } from '@/engine/setup';
 
@@ -31,6 +37,15 @@ interface GameStore {
   canManeuver: (maneuverId: string) => ReturnType<typeof canPerformSpacecraftManeuver>;
   collectSample: () => void;
   canCollectSample: () => ReturnType<typeof canCollectSample>;
+  recruitAstronaut: (astronautId: string) => void;
+  canRecruitAstronaut: (astronautId: string) => ReturnType<typeof canRecruitAstronaut>;
+  boardAstronaut: (astronautInstanceId: string, spacecraftId: string) => void;
+  canBoardAstronaut: (
+    astronautInstanceId: string,
+    spacecraftId: string,
+  ) => ReturnType<typeof canBoardAstronaut>;
+  unboardAstronaut: (astronautInstanceId: string) => void;
+  canUnboardAstronaut: (astronautInstanceId: string) => ReturnType<typeof canUnboardAstronaut>;
   advanceYear: () => void;
 }
 
@@ -127,6 +142,37 @@ export const useGameStore = create<GameStore>()(
           return { ok: false, reason: 'Select a spacecraft first.' };
         }
         return canCollectSample(state, selectedSpacecraftId);
+      },
+
+      recruitAstronaut: (astronautId) => {
+        set((store) => ({ state: recruitAstronaut(store.state, astronautId) }));
+      },
+
+      canRecruitAstronaut: (astronautId) => {
+        const { state } = get();
+        return canRecruitAstronaut(state, astronautId);
+      },
+
+      boardAstronaut: (astronautInstanceId, spacecraftId) => {
+        set((store) => ({
+          state: boardAstronaut(store.state, astronautInstanceId, spacecraftId),
+        }));
+      },
+
+      canBoardAstronaut: (astronautInstanceId, spacecraftId) => {
+        const { state } = get();
+        return canBoardAstronaut(state, astronautInstanceId, spacecraftId);
+      },
+
+      unboardAstronaut: (astronautInstanceId) => {
+        set((store) => ({
+          state: unboardAstronaut(store.state, astronautInstanceId),
+        }));
+      },
+
+      canUnboardAstronaut: (astronautInstanceId) => {
+        const { state } = get();
+        return canUnboardAstronaut(state, astronautInstanceId);
       },
 
       advanceYear: () => {

@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
 import {
   assembleSpacecraft,
+  boardAstronaut,
   buyComponent,
+  canBoardAstronaut,
   collectSample,
+  recruitAstronaut,
   canPerformSpacecraftManeuver,
   endYear,
   performSpacecraftManeuver,
@@ -244,5 +247,42 @@ describe('setup and actions', () => {
     state = resolveMissionChecks(state, 'onTurn');
     expect(state.missions[0].completed).toBe(true);
     expect(state.score).toBe(10);
+  });
+
+  it('recruits and boards astronaut with seat checks', () => {
+    let state = createInitialState('hard');
+    state = buyComponent(state, 'vostok');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+
+    state = recruitAstronaut(state, 'gagarin');
+    expect(state.astronauts).toHaveLength(1);
+    const astronautId = state.astronauts[0].instanceId;
+
+    const boardCheck = canBoardAstronaut(state, astronautId, craftId);
+    expect(boardCheck.ok).toBe(true);
+
+    state = boardAstronaut(state, astronautId, craftId);
+    expect(state.astronauts[0].spacecraftId).toBe(craftId);
+    expect(state.spacecraft[0].astronautInstanceIds).toContain(astronautId);
+  });
+
+  it('completes Space Station mission at start of year with astronaut in space', () => {
+    let state = createInitialState('hard');
+    state.missions = [{ definitionId: 'space-station', completed: false, removed: false }];
+    state = buyComponent(state, 'vostok');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+
+    state = recruitAstronaut(state, 'gagarin');
+    const astronautId = state.astronauts[0].instanceId;
+    state = boardAstronaut(state, astronautId, craftId);
+    state.spacecraft[0].locationId = 'earth-orbit';
+
+    state = endYear(state);
+    expect(state.missions[0].completed).toBe(true);
+    expect(state.score).toBe(6);
   });
 });

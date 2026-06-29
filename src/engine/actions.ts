@@ -1,4 +1,5 @@
 import { ADVANCEMENT_BY_ID, COMPONENT_BY_ID, COMPONENT_SUPPLY_LIMITS } from '@/data/components';
+import { ASTRONAUT_BY_ID } from '@/data/astronauts';
 import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { MANEUVER_DEFINITIONS } from '@/data/maneuvers';
 import { MISSION_BY_ID } from '@/data/missions';
@@ -79,6 +80,8 @@ const SAMPLEABLE_LOCATION_IDS = new Set([
   'ceres',
   'phobos',
 ]);
+
+export const ASTRONAUT_RECRUIT_COST = 2;
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -226,11 +229,20 @@ function damageFirstUndamagedComponent(
 function destroySpacecraft(
   inventory: ComponentInstance[],
   spacecraft: Spacecraft[],
+  astronauts: GameState['astronauts'],
   spacecraftId: string,
-): { inventory: ComponentInstance[]; spacecraft: Spacecraft[] } {
+): {
+  inventory: ComponentInstance[];
+  spacecraft: Spacecraft[];
+  astronauts: GameState['astronauts'];
+  astronautLosses: number;
+} {
+  const astronautLosses = astronauts.filter((astronaut) => astronaut.spacecraftId === spacecraftId).length;
   return {
     inventory: inventory.filter((component) => component.spacecraftId !== spacecraftId),
     spacecraft: spacecraft.filter((craft) => craft.id !== spacecraftId),
+    astronauts: astronauts.filter((astronaut) => astronaut.spacecraftId !== spacecraftId),
+    astronautLosses,
   };
 }
 
@@ -270,6 +282,20 @@ function hasHealthyAstronautOnCraft(state: GameState, spacecraftId: string): boo
   return state.astronauts.some(
     (astronaut) => astronaut.spacecraftId === spacecraftId && !astronaut.incapacitated,
   );
+}
+
+function getSpacecraftSeatCapacity(state: GameState, spacecraftId: string): number {
+  return state.inventory
+    .filter((component) => component.spacecraftId === spacecraftId)
+    .reduce((sum, component) => {
+      const definition = COMPONENT_BY_ID[component.definitionId];
+      if (!definition || definition.type !== 'capsule') return sum;
+      return sum + definition.seats;
+    }, 0);
+}
+
+function getSpacecraftAstronautCount(state: GameState, spacecraftId: string): number {
+  return state.astronauts.filter((astronaut) => astronaut.spacecraftId === spacecraftId).length;
 }
 
 function isSampleComponentOnEarth(state: GameState, component: ComponentInstance): boolean {
@@ -350,6 +376,25 @@ function isMissionCompleted(state: GameState, mission: MissionDefinition): boole
     });
   }
 
+  if (mission.type === 'manned') {
+    return state.astronauts.some((astronaut) => {
+      const spacecraft = astronaut.spacecraftId ? getSpacecraft(state, astronaut.spacecraftId) : undefined;
+      const onEarthNow = !astronaut.spacecraftId || spacecraft?.locationId === 'earth';
+      if (!onEarthNow) return false;
+
+      if (mission.id === 'man-in-space') {
+        return astronaut.visitedLocationIds.some((locationId) => locationId !== 'earth');
+      }
+      if (mission.id === 'man-in-orbit' || mission.targetLocation === 'earth-orbit') {
+        return astronaut.visitedLocationIds.includes('earth-orbit');
+      }
+      if (mission.targetLocation) {
+        return astronaut.visitedLocationIds.includes(mission.targetLocation);
+      }
+      return false;
+    });
+  }
+
   if (mission.type === 'spaceStation' && mission.targetLocation) {
     return state.spacecraft.some(
       (craft) =>
@@ -411,6 +456,128 @@ function updateMissionState(
 
 export function resolveMissionChecks(state: GameState, trigger: 'onTurn' | 'startOfYear'): GameState {
   return updateMissionState(state, trigger);
+}
+
+export interface AstronautCheck {
+  ok: boolean;
+  reason?: string;
+}
+
+export function canRecruitAstronaut(state: GameState, astronautId: string): AstronautCheck {
+  if (!ASTRONAUT_BY_ID[astronautId]) return { ok: false, reason: 'Unknown astronaut.' };
+  if (state.money < ASTRONAUT_RECRUIT_COST) {
+    return { ok: false, reason: `Need $${ASTRONAUT_RECRUIT_COST} to recruit astronaut.` };
+  }
+  const alreadyRecruited = state.astronauts.some((astronaut) => astronaut.definitionId === astronautId);
+  if (alreadyRecruited) return { ok: false, reason: 'Astronaut already recruited.' };
+  return { ok: true };
+}
+
+export function recruitAstronaut(state: GameState, astronautId: string): GameState {
+  const check = canRecruitAstronaut(state, astronautId);
+  if (!check.ok) return state;
+
+  const astronautName = ASTRONAUT_BY_ID[astronautId]?.name ?? astronautId;
+  return {
+    ...state,
+    money: state.money - ASTRONAUT_RECRUIT_COST,
+    astronauts: [
+      ...state.astronauts,
+      {
+        instanceId: nextId('astronaut'),
+        definitionId: astronautId,
+        incapacitated: false,
+        visitedLocationIds: ['earth'],
+      },
+    ],
+    log: log(state, `Recruited astronaut ${astronautName} for $${ASTRONAUT_RECRUIT_COST}.`),
+  };
+}
+
+export function canBoardAstronaut(
+  state: GameState,
+  astronautInstanceId: string,
+  spacecraftId: string,
+): AstronautCheck {
+  const craft = getSpacecraft(state, spacecraftId);
+  if (!craft) return { ok: false, reason: 'Unknown spacecraft.' };
+  if (craft.locationId !== 'earth') return { ok: false, reason: 'Boarding only allowed on Earth.' };
+
+  const astronaut = state.astronauts.find((entry) => entry.instanceId === astronautInstanceId);
+  if (!astronaut) return { ok: false, reason: 'Unknown astronaut.' };
+  if (astronaut.spacecraftId) return { ok: false, reason: 'Astronaut already boarded.' };
+  if (astronaut.incapacitated) return { ok: false, reason: 'Incapacitated astronaut cannot board.' };
+
+  const seats = getSpacecraftSeatCapacity(state, spacecraftId);
+  const occupants = getSpacecraftAstronautCount(state, spacecraftId);
+  if (seats <= occupants) return { ok: false, reason: 'No available seats in spacecraft capsules.' };
+  return { ok: true };
+}
+
+export function boardAstronaut(
+  state: GameState,
+  astronautInstanceId: string,
+  spacecraftId: string,
+): GameState {
+  const check = canBoardAstronaut(state, astronautInstanceId, spacecraftId);
+  if (!check.ok) return state;
+
+  const craft = getSpacecraft(state, spacecraftId);
+  const astronaut = state.astronauts.find((entry) => entry.instanceId === astronautInstanceId);
+  if (!craft || !astronaut) return state;
+
+  const astronautName = ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId;
+  return {
+    ...state,
+    astronauts: state.astronauts.map((entry) =>
+      entry.instanceId === astronautInstanceId ? { ...entry, spacecraftId } : entry,
+    ),
+    spacecraft: state.spacecraft.map((entry) =>
+      entry.id === spacecraftId
+        ? { ...entry, astronautInstanceIds: [...entry.astronautInstanceIds, astronautInstanceId] }
+        : entry,
+    ),
+    log: log(state, `${astronautName} boarded ${craft.name}.`),
+  };
+}
+
+export function canUnboardAstronaut(
+  state: GameState,
+  astronautInstanceId: string,
+): AstronautCheck {
+  const astronaut = state.astronauts.find((entry) => entry.instanceId === astronautInstanceId);
+  if (!astronaut) return { ok: false, reason: 'Unknown astronaut.' };
+  if (!astronaut.spacecraftId) return { ok: false, reason: 'Astronaut is not aboard a spacecraft.' };
+  const craft = getSpacecraft(state, astronaut.spacecraftId);
+  if (!craft) return { ok: false, reason: 'Astronaut craft no longer exists.' };
+  if (craft.locationId !== 'earth') return { ok: false, reason: 'Unboarding only allowed on Earth.' };
+  return { ok: true };
+}
+
+export function unboardAstronaut(state: GameState, astronautInstanceId: string): GameState {
+  const check = canUnboardAstronaut(state, astronautInstanceId);
+  if (!check.ok) return state;
+
+  const astronaut = state.astronauts.find((entry) => entry.instanceId === astronautInstanceId);
+  if (!astronaut?.spacecraftId) return state;
+  const craft = getSpacecraft(state, astronaut.spacecraftId);
+  const astronautName = ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId;
+
+  return {
+    ...state,
+    astronauts: state.astronauts.map((entry) =>
+      entry.instanceId === astronautInstanceId ? { ...entry, spacecraftId: undefined } : entry,
+    ),
+    spacecraft: state.spacecraft.map((entry) =>
+      entry.id === astronaut.spacecraftId
+        ? {
+            ...entry,
+            astronautInstanceIds: entry.astronautInstanceIds.filter((id) => id !== astronautInstanceId),
+          }
+        : entry,
+    ),
+    log: log(state, `${astronautName} unboarded${craft ? ` from ${craft.name}` : ''}.`),
+  };
 }
 
 export interface ManeuverCheck {
@@ -584,10 +751,16 @@ export function performSpacecraftManeuver(
         }
 
         if (draw.outcome === 'majorFailure') {
-          const destroyed = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+          const destroyed = destroySpacecraft(
+            nextState.inventory,
+            nextState.spacecraft,
+            nextState.astronauts,
+            spacecraftId,
+          );
           nextState = {
             ...nextState,
             ...destroyed,
+            lostAstronauts: nextState.lostAstronauts + destroyed.astronautLosses,
             log: log(nextState, `${definition.name} major failure: ${craft.name} destroyed during launch.`),
           };
           return updateMissionState(nextState, 'onTurn');
@@ -666,6 +839,16 @@ export function performSpacecraftManeuver(
     ...nextState,
     inventory,
     spacecraft,
+    astronauts: nextState.astronauts.map((astronaut) =>
+      astronaut.spacecraftId === spacecraftId
+        ? {
+            ...astronaut,
+            visitedLocationIds: astronaut.visitedLocationIds.includes(maneuver.to)
+              ? astronaut.visitedLocationIds
+              : [...astronaut.visitedLocationIds, maneuver.to],
+          }
+        : astronaut,
+    ),
     log: log(
       nextState,
       `${craft.name} maneuvered ${toLocationName(maneuver.from)} → ${toLocationName(maneuver.to)} (${thrustLog}${spentLog}).`,
@@ -711,10 +894,16 @@ export function performSpacecraftManeuver(
     );
     if (capsules.length > 0) {
       if (!hasAdvancement(nextState, 'reentry')) {
-        const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+        const result = destroySpacecraft(
+          nextState.inventory,
+          nextState.spacecraft,
+          nextState.astronauts,
+          spacecraftId,
+        );
         nextState = {
           ...nextState,
           ...result,
+          lostAstronauts: nextState.lostAstronauts + result.astronautLosses,
           log: log(nextState, `${craft.name} was destroyed during re-entry (Re-entry advancement missing).`),
         };
         return updateMissionState(nextState, 'onTurn');
@@ -723,10 +912,16 @@ export function performSpacecraftManeuver(
       const draw = drawAdvancementOutcome(nextState, 'reentry');
       nextState = draw.state;
       if (draw.outcome === 'majorFailure') {
-        const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+        const result = destroySpacecraft(
+          nextState.inventory,
+          nextState.spacecraft,
+          nextState.astronauts,
+          spacecraftId,
+        );
         nextState = {
           ...nextState,
           ...result,
+          lostAstronauts: nextState.lostAstronauts + result.astronautLosses,
           log: log(nextState, `Re-entry major failure: ${craft.name} destroyed.`),
         };
         return updateMissionState(nextState, 'onTurn');
@@ -760,10 +955,16 @@ export function performSpacecraftManeuver(
 
   if (maneuver.landing && !maneuver.optionalLanding) {
     if (!hasAdvancement(nextState, 'landing')) {
-      const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+      const result = destroySpacecraft(
+        nextState.inventory,
+        nextState.spacecraft,
+        nextState.astronauts,
+        spacecraftId,
+      );
       nextState = {
         ...nextState,
         ...result,
+        lostAstronauts: nextState.lostAstronauts + result.astronautLosses,
         log: log(nextState, `${craft.name} was destroyed landing (Landing advancement missing).`),
       };
       return updateMissionState(nextState, 'onTurn');
@@ -773,10 +974,16 @@ export function performSpacecraftManeuver(
     nextState = draw.state;
 
     if (draw.outcome === 'majorFailure') {
-      const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+      const result = destroySpacecraft(
+        nextState.inventory,
+        nextState.spacecraft,
+        nextState.astronauts,
+        spacecraftId,
+      );
       nextState = {
         ...nextState,
         ...result,
+        lostAstronauts: nextState.lostAstronauts + result.astronautLosses,
         log: log(nextState, `Landing major failure: spacecraft destroyed.`),
       };
       return updateMissionState(nextState, 'onTurn');
@@ -925,9 +1132,14 @@ export function disassembleSpacecraft(state: GameState, spacecraftId: string): G
       : item,
   );
 
+  const astronauts = state.astronauts.map((astronaut) =>
+    astronaut.spacecraftId === spacecraftId ? { ...astronaut, spacecraftId: undefined } : astronaut,
+  );
+
   return {
     ...state,
     inventory,
+    astronauts,
     spacecraft: state.spacecraft.filter((s) => s.id !== spacecraftId),
     log: log(state, `Disassembled ${craft.name}.`),
   };
