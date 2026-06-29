@@ -1,4 +1,5 @@
 import { ADVANCEMENT_BY_ID, COMPONENT_BY_ID, COMPONENT_SUPPLY_LIMITS } from '@/data/components';
+import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { MANEUVER_DEFINITIONS } from '@/data/maneuvers';
 import { toLocationName } from '@/data/locations';
 import { calculateRocketThrust, calculateThrustNeeded, canPerformManeuver } from '@/engine/thrust';
@@ -55,6 +56,68 @@ function getSpacecraftMass(components: ComponentInstance[]): number {
     const def = COMPONENT_BY_ID[component.definitionId];
     return sum + (def?.mass ?? 0);
   }, 0);
+}
+
+function rollD8(): number {
+  return Math.floor(Math.random() * 8) + 1;
+}
+
+function getRadiationLevel(state: GameState): number {
+  const revealed = state.revealedLocations.find((location) => location.locationId === 'solar-radiation');
+  if (!revealed) return 1;
+  const definition = EXPLORABLE_LOCATIONS.find((location) => location.id === 'solar-radiation');
+  const variant = definition?.variants.find((item) => item.id === revealed.variantId);
+  if (!variant) return 1;
+  const match = variant.label.match(/(\d+)/);
+  return match ? Number(match[1]) : 1;
+}
+
+function damageFirstUndamagedComponent(
+  inventory: ComponentInstance[],
+  spacecraftId: string,
+): { inventory: ComponentInstance[]; damagedId?: string } {
+  const index = inventory.findIndex(
+    (component) => component.spacecraftId === spacecraftId && component.location === 'spacecraft' && !component.damaged,
+  );
+  if (index === -1) return { inventory };
+  const next = [...inventory];
+  next[index] = { ...next[index], damaged: true };
+  return { inventory: next, damagedId: next[index].instanceId };
+}
+
+function destroySpacecraft(
+  inventory: ComponentInstance[],
+  spacecraft: Spacecraft[],
+  spacecraftId: string,
+): { inventory: ComponentInstance[]; spacecraft: Spacecraft[] } {
+  return {
+    inventory: inventory.filter((component) => component.spacecraftId !== spacecraftId),
+    spacecraft: spacecraft.filter((craft) => craft.id !== spacecraftId),
+  };
+}
+
+function revealExplorableIfNeeded(state: GameState, destinationId: string): { state: GameState; message?: string } {
+  const index = state.revealedLocations.findIndex((location) => location.locationId === destinationId);
+  if (index === -1) return { state };
+  if (state.revealedLocations[index].revealed) return { state };
+
+  const definition = EXPLORABLE_LOCATIONS.find((location) => location.id === destinationId);
+  const variant = definition?.variants.find((item) => item.id === state.revealedLocations[index].variantId);
+
+  const revealedLocations = [...state.revealedLocations];
+  revealedLocations[index] = { ...revealedLocations[index], revealed: true };
+
+  const nextState: GameState = {
+    ...state,
+    revealedLocations,
+  };
+
+  if (!variant) return { state: nextState };
+
+  return {
+    state: nextState,
+    message: `${toLocationName(destinationId)} explored: ${variant.label}.`,
+  };
 }
 
 export interface ManeuverCheck {
@@ -146,9 +209,9 @@ export function performSpacecraftManeuver(
         })
         .map((component) => component.instanceId);
 
-  const inventory = state.inventory.filter((item) => !consumedRocketIds.includes(item.instanceId));
+  let inventory = state.inventory.filter((item) => !consumedRocketIds.includes(item.instanceId));
 
-  const spacecraft = state.spacecraft.map((entry) => {
+  let spacecraft = state.spacecraft.map((entry) => {
     if (entry.id !== spacecraftId) return entry;
     return {
       ...entry,
@@ -158,27 +221,136 @@ export function performSpacecraftManeuver(
     };
   });
 
-  const hazardFlags = [
-    maneuver.solarRadiation ? 'radiation' : null,
-    maneuver.reentry ? 're-entry' : null,
-    maneuver.landing ? 'landing' : null,
-  ].filter(Boolean);
-
   const thrustLog = maneuver.exclamation
     ? 'automatic maneuver'
     : `mass ${check.mass}, thrust ${check.providedThrust}/${check.requiredThrust}`;
   const spentLog = consumedRocketIds.length > 0 ? `; expended ${consumedRocketIds.length} rocket(s)` : '';
-  const hazardLog = hazardFlags.length > 0 ? `; hazards: ${hazardFlags.join(', ')} (resolution pending)` : '';
-
-  return {
+  let nextState: GameState = {
     ...state,
     inventory,
     spacecraft,
-    log: log(
-      state,
-      `${craft.name} maneuvered ${toLocationName(maneuver.from)} → ${toLocationName(maneuver.to)} (${thrustLog}${spentLog}${hazardLog}).`,
-    ),
+    log: log(state, `${craft.name} maneuvered ${toLocationName(maneuver.from)} → ${toLocationName(maneuver.to)} (${thrustLog}${spentLog}).`),
   };
+
+  if (maneuver.solarRadiation) {
+    const years = Math.max(1, maneuver.hourglasses);
+    const level = getRadiationLevel(nextState);
+    const threshold = level * years;
+    const crew = nextState.astronauts.filter(
+      (astronaut) => astronaut.spacecraftId === spacecraftId && !astronaut.incapacitated,
+    );
+    if (crew.length === 0) {
+      nextState = { ...nextState, log: log(nextState, `Radiation hazard: no astronauts aboard ${craft.name}.`) };
+    } else {
+      let astronauts = [...nextState.astronauts];
+      for (const astronaut of crew) {
+        const roll = rollD8();
+        if (roll <= threshold) {
+          astronauts = astronauts.map((candidate) =>
+            candidate.instanceId === astronaut.instanceId ? { ...candidate, incapacitated: true } : candidate,
+          );
+          nextState = {
+            ...nextState,
+            astronauts,
+            log: log(nextState, `Radiation roll ${roll} ≤ ${threshold}: astronaut incapacitated.`),
+          };
+        } else {
+          nextState = {
+            ...nextState,
+            log: log(nextState, `Radiation roll ${roll} > ${threshold}: astronaut remains healthy.`),
+          };
+        }
+      }
+    }
+  }
+
+  if (maneuver.reentry) {
+    const craftComponents = getSpacecraftComponents(nextState, spacecraftId);
+    const capsules = craftComponents.filter((component) => COMPONENT_BY_ID[component.definitionId]?.type === 'capsule');
+    if (capsules.length > 0) {
+      if (!hasAdvancement(nextState, 'reentry')) {
+        const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+        nextState = {
+          ...nextState,
+          ...result,
+          log: log(nextState, `${craft.name} was destroyed during re-entry (Re-entry advancement missing).`),
+        };
+        return nextState;
+      }
+
+      const roll = rollD8();
+      if (roll <= 2) {
+        const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+        nextState = {
+          ...nextState,
+          ...result,
+          log: log(nextState, `Re-entry major failure (roll ${roll}): ${craft.name} destroyed.`),
+        };
+        return nextState;
+      }
+
+      if (roll <= 4) {
+        const damaged = damageFirstUndamagedComponent(nextState.inventory, spacecraftId);
+        nextState = {
+          ...nextState,
+          inventory: damaged.inventory,
+          log: log(nextState, `Re-entry minor failure (roll ${roll}): component damaged.`),
+        };
+      } else {
+        nextState = {
+          ...nextState,
+          log: log(nextState, `Re-entry success (roll ${roll}).`),
+        };
+      }
+    }
+  }
+
+  if (maneuver.landing && !maneuver.optionalLanding) {
+    if (!hasAdvancement(nextState, 'landing')) {
+      const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+      nextState = {
+        ...nextState,
+        ...result,
+        log: log(nextState, `${craft.name} was destroyed landing (Landing advancement missing).`),
+      };
+      return nextState;
+    }
+
+    const roll = rollD8();
+    if (roll <= 2) {
+      const result = destroySpacecraft(nextState.inventory, nextState.spacecraft, spacecraftId);
+      nextState = {
+        ...nextState,
+        ...result,
+        log: log(nextState, `Landing major failure (roll ${roll}): spacecraft destroyed.`),
+      };
+      return nextState;
+    }
+    if (roll <= 4) {
+      const damaged = damageFirstUndamagedComponent(nextState.inventory, spacecraftId);
+      nextState = {
+        ...nextState,
+        inventory: damaged.inventory,
+        log: log(nextState, `Landing minor failure (roll ${roll}): component damaged.`),
+      };
+    } else {
+      nextState = {
+        ...nextState,
+        log: log(nextState, `Landing success (roll ${roll}).`),
+      };
+    }
+  }
+
+  const revealed = revealExplorableIfNeeded(nextState, maneuver.to);
+  nextState = revealed.state;
+  if (revealed.message) {
+    nextState = {
+      ...nextState,
+      log: log(nextState, revealed.message),
+    };
+  }
+
+  return nextState;
 }
 
 export function canBuyComponent(state: GameState, componentId: string): { ok: boolean; reason?: string } {

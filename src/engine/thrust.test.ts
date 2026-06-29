@@ -71,4 +71,40 @@ describe('setup and actions', () => {
     expect(state.spacecraft[0].locationId).toBe('suborbital-flight');
     expect(state.spacecraft[0].componentInstanceIds).toHaveLength(1);
   });
+
+  it('destroys spacecraft on re-entry without re-entry advancement', () => {
+    let state = createInitialState('hard');
+    state = buyComponent(state, 'vostok');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+    state.spacecraft[0].locationId = 'earth-orbit';
+
+    const maneuver = getManeuver('earth-orbit', 'earth');
+    expect(maneuver).toBeDefined();
+
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(state.spacecraft.find((craft) => craft.id === craftId)).toBeUndefined();
+  });
+
+  it('destroys spacecraft on landing without landing advancement', () => {
+    let state = createInitialState('hard');
+    state = researchAdvancement(state, 'juno');
+    state = buyComponent(state, 'probe');
+    state = buyComponent(state, 'juno');
+    state = buyComponent(state, 'juno');
+    const inventoryIds = state.inventory.map((item) => item.instanceId);
+    state = assembleSpacecraft(state, inventoryIds);
+    const craftId = state.spacecraft[0].id;
+    state.spacecraft[0].locationId = 'lunar-orbit';
+
+    const maneuver = getManeuver('lunar-orbit', 'moon');
+    expect(maneuver).toBeDefined();
+
+    const canDo = canPerformSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(canDo.ok).toBe(true);
+
+    state = performSpacecraftManeuver(state, craftId, maneuver!.id);
+    expect(state.spacecraft.find((craft) => craft.id === craftId)).toBeUndefined();
+  });
 });

@@ -85,9 +85,14 @@ export const useGameStore = create<GameStore>()(
       performManeuver: (maneuverId) => {
         const { selectedSpacecraftId } = get();
         if (!selectedSpacecraftId) return;
-        set((store) => ({
-          state: performSpacecraftManeuver(store.state, selectedSpacecraftId, maneuverId),
-        }));
+        set((store) => {
+          const state = performSpacecraftManeuver(store.state, selectedSpacecraftId, maneuverId);
+          const stillExists = state.spacecraft.some((craft) => craft.id === selectedSpacecraftId);
+          return {
+            state,
+            selectedSpacecraftId: stillExists ? selectedSpacecraftId : null,
+          };
+        });
       },
 
       canManeuver: (maneuverId) => {

@@ -26,7 +26,7 @@ export function ManeuverPanel() {
     <section className={styles.panel}>
       <div className={styles.header}>
         <h2>Maneuvers</h2>
-        <span className={styles.caption}>Phase 1 interaction</span>
+        <span className={styles.caption}>Hazard pass</span>
       </div>
 
       <label className={styles.label}>
