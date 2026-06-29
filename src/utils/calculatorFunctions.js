@@ -1,3 +1,10 @@
+import { MANEUVER_ICONS, difficultyIcon, slingshotIcon } from './maneuverIcons.js';
+
+function iconImg(src, className = 'icon', style = '') {
+	const styleAttr = style ? ` style="${style}"` : '';
+	const classAttr = className ? ` class="${className}"` : '';
+	return `<img src="${src}" alt=""${classAttr}${styleAttr} />`;
+}
 
 var payload = [];
 var rockets = [];
@@ -231,12 +238,12 @@ function UpdateAllValues() {
 
 	var hourglasses = '';
 	if (manuever.Hourglasses > 3) {
-		hourglasses += '<img class="hourglass" src="images/hourglass.png" />';
+		hourglasses += iconImg(MANEUVER_ICONS.hourglass, 'hourglass');
 		hourglasses += ' x' + manuever.Hourglasses;
 	}
 	else {
 		for (var i = 0; i < manuever.Hourglasses; i++)
-			hourglasses += '<img class="hourglass" src="images/hourglass.png" />';
+			hourglasses += iconImg(MANEUVER_ICONS.hourglass, 'hourglass');
 	}
 	$("#hourglasses").html('');
 	$("#hourglasses").html(hourglasses);
@@ -487,9 +494,9 @@ function CreateSpacecraftDivs(componentsArray, containerId) {
 		var htmlString = '';
 		htmlString = '<table><tr>';
 		htmlString += '<td class="name">' + componentsArray[i].Name + '</td>';
-		htmlString += '<td class="data"><img class="icon" src="images/mass.png" />&nbsp;' + componentsArray[i].Mass;
+		htmlString += '<td class="data">' + iconImg(MANEUVER_ICONS.mass) + '&nbsp;' + componentsArray[i].Mass;
 		if (componentsArray[i].Thrust != '0') {
-			htmlString += '&nbsp;&nbsp;<img class="icon" src="images/thrust.png" />&nbsp;' + componentsArray[i].Thrust + '</td>';
+			htmlString += '&nbsp;&nbsp;' + iconImg(MANEUVER_ICONS.thrust) + '&nbsp;' + componentsArray[i].Thrust + '</td>';
 		}
 
 		htmlString += '</tr></table>';
@@ -654,9 +661,9 @@ function CreateComponentsDialog(typeAllowed, addToArray, addToContainer) {
 		var htmlString = '';
 		htmlString = '<table><tr>';
 		htmlString += '<td class="name">' + components[i].Name + '</td>';
-		htmlString += '<td class="data"><img class="icon" src="images/mass.png" />&nbsp;' + components[i].Mass;
+		htmlString += '<td class="data">' + iconImg(MANEUVER_ICONS.mass) + '&nbsp;' + components[i].Mass;
 		if (components[i].Thrust != '0') {
-			htmlString += '&nbsp;&nbsp;<img class="icon" src="images/thrust.png" />&nbsp;' + components[i].Thrust + '</td>';
+			htmlString += '&nbsp;&nbsp;' + iconImg(MANEUVER_ICONS.thrust) + '&nbsp;' + components[i].Thrust + '</td>';
 		}
 		htmlString += '</tr></table>';
 
@@ -809,38 +816,38 @@ function GetAerobrakingLocationCard2(fromLocation) {
 	if (settings.IncludeOuterPlanets) {
 		if (fromLocation == "Mars Fly-By") {
 			td = GetLocationCard2("Mars Orbit", "Mars<br/>Orbit", fromLocation, "location-mars-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Venus Fly-By") {
 			td = GetLocationCard2("Venus Orbit", "Venus<br/>Orbit", fromLocation, "location-venus-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Outer Plan Trans") {
 			td = GetLocationCard2("Mars Orbit", "Mars<br/>Orbit", fromLocation, "location-mars-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Jupiter Fly-By") {
 			td = GetLocationCard2("Jupiter Orbit", "Jupiter<br/>Orbit", fromLocation, "location-jupiter-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Saturn Fly-By") {
 			td = GetLocationCard2("Saturn Orbit", "Saturn<br/>Orbit", fromLocation, "location-saturn-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Saturn Orbit") {
 			td = GetLocationCard2("Titan Orbit", "Titan<br/>Orbit", fromLocation, "location-titan-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 	}
 
 	if (settings.IncludeStations) {
 		if (fromLocation == "Mars Cycler") {
 			td = GetLocationCard2("Mars Orbit", "Mars<br/>Orbit", fromLocation, "location-mars-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 		if (fromLocation == "Earth Cycler") {
 			td = GetLocationCard2("Earth Orbit", "Earth<br/>Orbit", fromLocation, "location-earth-gravity", true, true);
-			td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+			td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		}
 	}
 
@@ -1092,7 +1099,7 @@ function CreateManueversDialog2(fromLocation) {
 	// Outer Plan Trans has two aerobraking maneuvers
 	if (settings.IncludeOuterPlanets && fromLocation == "Outer Plan Trans") {
 		var td = GetLocationCard2("Earth Orbit", "Earth<br/>Orbit", fromLocation, "location-earth-gravity", true, true);
-		td.append('<br/><img style="height: 25%;" src="images/aerobraking.png" />');
+		td.append('<br/>' + iconImg(MANEUVER_ICONS.aerobraking, '', 'height: 25%;'));
 		tr.append(td);
 	}
 	else {
@@ -1111,54 +1118,58 @@ function GetManueverHtmlString(man, percent) {
 
 	var htmlString = "";
 
+	const sizeStyle = 'height: ' + percent + ';';
+
 	// Slingshot
-	if (man.Slingshot != null)
-		htmlString += '<img style="height: ' + percent + ';" src="images/' + man.Slingshot + '.png" />';
+	if (man.Slingshot != null) {
+		const src = slingshotIcon(man.Slingshot);
+		if (src) htmlString += iconImg(src, '', sizeStyle);
+	}
 
 	// Exclamation or Difficulty
 	if (man.Exclamation) {
-		htmlString += '<img style="height: ' + percent + ';" src="images/exclamation.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.exclamation, '', sizeStyle);
 	}
 	else {
-		htmlString += '<img style="height: ' + percent + ';" src="images/' + man.Difficulty + '.png" />';
+		htmlString += iconImg(difficultyIcon(man.Difficulty), '', sizeStyle);
 	}
 
 	// SolarRadiation
 	if (man.SolarRadiation) {
-		htmlString += '<img style="height: ' + percent + ';" src="images/solar-radiation.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.solarRadiation, '', sizeStyle);
 	}
 
 	// Hourglasses
 	if (man.Hourglasses > 3) {
-		htmlString += '<img style="height: ' + percent + ';" src="images/hourglass.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.hourglass, '', sizeStyle);
 		htmlString += ' x' + man.Hourglasses;
 	}
 	else {
 		for (var i = 0; i < manuever.Hourglasses; i++)
-			htmlString += '<img style="height: ' + percent + ';" src="images/hourglass.png" />';
+			htmlString += iconImg(MANEUVER_ICONS.hourglass, '', sizeStyle);
 	}
 
 	// Optional hourlgass
 	if (man.OptionalHourglass) {
-		htmlString += '(<img style="height: ' + percent + ';" src="images/hourglass.png" />)';
+		htmlString += '(' + iconImg(MANEUVER_ICONS.hourglass, '', sizeStyle) + ')';
 	}
 
 	// Aerobraking
 	if (man.Aerobraking) {
-		htmlString += '<img style="height: ' + percent + ';" src="images/aerobraking.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.aerobraking, '', sizeStyle);
 	}
 
 	// Reentry
 	if (man.Reentry)
-		htmlString += '<img style="height: ' + percent + ';" src="images/reentry.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.reentry, '', sizeStyle);
 
 	// Landing
 	if (man.Landing)
-		htmlString += '<img style="height: ' + percent + ';" src="images/landing.png" />';
+		htmlString += iconImg(MANEUVER_ICONS.landing, '', sizeStyle);
 
 	// OptionalLanding
 	if (man.OptionalLanding)
-		htmlString += '(<img style="height: ' + percent + ';" src="images/landing.png" />)';
+		htmlString += '(' + iconImg(MANEUVER_ICONS.landing, '', sizeStyle) + ')';
 
 	return htmlString;
 }
