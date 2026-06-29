@@ -1,0 +1,26 @@
+.panel {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #111827;
+  border: 1px solid #334155;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.panel ol {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.panel li {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}

@@ -1,0 +1,35 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e2e8f0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  grid-template-areas:
+    'PhobosUnexplored MarsFlyby CeresUnexplored VenusOrbit VenusUnexplored'
+    'MarsUnexplored MarsOrbit InnerPlanetsTransferWithMercury VenusFlyby .'
+    '. . Earthorbit LunarOrbit MoonUnexplored'
+    'MercuryFlyby MercuryOrbit SuborbitalFlightUnexplored LunarFlyBy .'
+    'SolarRadiationUnexplored MercuryUnexplored Earth . .';
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(90px, 1fr));
+    grid-template-areas: none;
+  }
+
+  .grid > * {
+    grid-area: auto !important;
+    rotate: 0deg !important;
+  }
+}

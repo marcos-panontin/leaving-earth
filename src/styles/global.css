@@ -174,7 +174,7 @@ body {
   cursor: pointer;
 }
 
-// BUTTON FOR CREATING NEW
+/* Legacy button styles retained for calculator tooling */
 
 .buttons-location {
   background-color: tomato;

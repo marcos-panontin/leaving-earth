@@ -1,4 +1,4 @@
-import { MANEUVER_ICONS, difficultyIcon, slingshotIcon } from './maneuverIcons.js';
+import { MANEUVER_ICONS, difficultyIcon, slingshotIcon } from './maneuverIcons.ts';
 
 function iconImg(src, className = 'icon', style = '') {
 	const styleAttr = style ? ` style="${style}"` : '';
