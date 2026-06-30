@@ -80,6 +80,21 @@
   color: #94a3b8;
 }
 
+.craftInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.craftImage {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.4rem;
+  object-fit: cover;
+  border: 1px solid #475569;
+  flex-shrink: 0;
+}
+
 .crewRecruitGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

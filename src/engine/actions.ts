@@ -1,5 +1,6 @@
 import { ADVANCEMENT_BY_ID, COMPONENT_BY_ID, COMPONENT_SUPPLY_LIMITS } from '@/data/components';
 import { ASTRONAUT_BY_ID } from '@/data/astronauts';
+import { generateSpacecraftName } from '@/data/spacecraftNames';
 import { EXPLORABLE_LOCATIONS } from '@/data/locations';
 import { MANEUVER_DEFINITIONS } from '@/data/maneuvers';
 import { MISSION_BY_ID } from '@/data/missions';
@@ -1099,9 +1100,16 @@ export function assembleSpacecraft(
   if (!check.ok) return state;
 
   const spacecraftId = nextId('craft');
+  const normalizedName = name?.trim();
   const spacecraft: Spacecraft = {
     id: spacecraftId,
-    name: name ?? `Spacecraft ${state.spacecraft.length + 1}`,
+    name:
+      normalizedName && normalizedName.length > 0
+        ? normalizedName
+        : generateSpacecraftName(
+            state.agencyId,
+            state.spacecraft.map((craft) => craft.name),
+          ),
     locationId: 'earth',
     componentInstanceIds,
     astronautInstanceIds: [],

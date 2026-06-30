@@ -3,6 +3,7 @@ import { ASTRONAUT_BY_ID, ASTRONAUT_DEFINITIONS } from '@/data/astronauts';
 import { ASTRONAUT_RECRUIT_COST, canAssembleSpacecraft } from '@/engine/actions';
 import { useGameStore } from '@/store/gameStore';
 import { ComponentCard } from '@/components/cards/ComponentCard';
+import { spacecraftImageForId } from '@/utils/spacecraftVisuals';
 import styles from './HangarPanel.module.css';
 
 export function HangarPanel() {
@@ -126,33 +127,40 @@ export function HangarPanel() {
             );
             return (
               <li key={craft.id}>
-                <div>
-                  <strong>{craft.name}</strong>
-                  <p>{components.length} parts · mass {mass} · crew {astronautsOnCraft.length}</p>
-                  {astronautsOnCraft.length > 0 && (
-                    <p className={styles.crewNames}>
-                      {astronautsOnCraft
-                        .map((astronaut) => ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId)
-                        .join(', ')}
-                    </p>
-                  )}
-                  <div className={styles.boardActions}>
-                    {state.astronauts
-                      .filter((astronaut) => !astronaut.spacecraftId && !astronaut.incapacitated)
-                      .map((astronaut) => {
-                        const check = canBoardAstronaut(astronaut.instanceId, craft.id);
-                        return (
-                          <button
-                            key={`${craft.id}-${astronaut.instanceId}`}
-                            type="button"
-                            disabled={!check.ok}
-                            title={check.reason}
-                            onClick={() => boardAstronaut(astronaut.instanceId, craft.id)}
-                          >
-                            Board {ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId}
-                          </button>
-                        );
-                      })}
+                <div className={styles.craftInfo}>
+                  <img
+                    src={spacecraftImageForId(craft.id)}
+                    alt={`${craft.name} profile`}
+                    className={styles.craftImage}
+                  />
+                  <div>
+                    <strong>{craft.name}</strong>
+                    <p>{components.length} parts · mass {mass} · crew {astronautsOnCraft.length}</p>
+                    {astronautsOnCraft.length > 0 && (
+                      <p className={styles.crewNames}>
+                        {astronautsOnCraft
+                          .map((astronaut) => ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId)
+                          .join(', ')}
+                      </p>
+                    )}
+                    <div className={styles.boardActions}>
+                      {state.astronauts
+                        .filter((astronaut) => !astronaut.spacecraftId && !astronaut.incapacitated)
+                        .map((astronaut) => {
+                          const check = canBoardAstronaut(astronaut.instanceId, craft.id);
+                          return (
+                            <button
+                              key={`${craft.id}-${astronaut.instanceId}`}
+                              type="button"
+                              disabled={!check.ok}
+                              title={check.reason}
+                              onClick={() => boardAstronaut(astronaut.instanceId, craft.id)}
+                            >
+                              Board {ASTRONAUT_BY_ID[astronaut.definitionId]?.name ?? astronaut.definitionId}
+                            </button>
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
                 <button type="button" onClick={() => disassemble(craft.id)}>Disassemble</button>
