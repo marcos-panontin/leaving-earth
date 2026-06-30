@@ -33,7 +33,11 @@
   cursor: pointer;
 }
 
-.headerActions button:disabled {
+.headerActions button:disabled,
+.craftList button:disabled,
+.crewRecruitButton:disabled,
+.crewActions button:disabled,
+.boardActions button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -74,4 +78,86 @@
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
   color: #94a3b8;
+}
+
+.craftInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.craftImage {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.4rem;
+  object-fit: cover;
+  border: 1px solid #475569;
+  flex-shrink: 0;
+}
+
+.crewRecruitGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.crewRecruitButton {
+  border: 1px solid #475569;
+  border-radius: 0.45rem;
+  background: #1f2937;
+  color: #e2e8f0;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.68rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.crewList {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.crewList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.45rem;
+  background: #0f172a;
+}
+
+.crewList p {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.crewActions button,
+.boardActions button {
+  border: 1px solid #475569;
+  border-radius: 0.45rem;
+  background: #1f2937;
+  color: #e2e8f0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.boardActions {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.crewNames {
+  margin-top: 0.25rem;
+  font-size: 0.68rem !important;
+  color: #cbd5e1 !important;
 }

@@ -42,3 +42,32 @@
   display: grid;
   place-items: center;
 }
+
+.tokenRow {
+  position: absolute;
+  left: 0.35rem;
+  top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: calc(100% - 2.2rem);
+  overflow: hidden;
+}
+
+.token {
+  width: 18px;
+  height: 18px;
+  border-radius: 0.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.8);
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.more {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 999px;
+  padding: 0.05rem 0.3rem;
+}

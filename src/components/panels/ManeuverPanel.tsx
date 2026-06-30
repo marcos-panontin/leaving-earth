@@ -10,6 +10,8 @@ export function ManeuverPanel() {
   const selectSpacecraft = useGameStore((s) => s.selectSpacecraft);
   const performManeuver = useGameStore((s) => s.performManeuver);
   const canManeuver = useGameStore((s) => s.canManeuver);
+  const collectSample = useGameStore((s) => s.collectSample);
+  const canCollectSample = useGameStore((s) => s.canCollectSample);
 
   const selectedCraft =
     state.spacecraft.find((craft) => craft.id === selectedSpacecraftId) ?? state.spacecraft[0];
@@ -26,7 +28,7 @@ export function ManeuverPanel() {
     <section className={styles.panel}>
       <div className={styles.header}>
         <h2>Maneuvers</h2>
-        <span className={styles.caption}>Phase 1 interaction</span>
+        <span className={styles.caption}>Hazard pass</span>
       </div>
 
       <label className={styles.label}>
@@ -54,6 +56,16 @@ export function ManeuverPanel() {
             Current location: <strong>{toLocationName(selectedCraft.locationId)}</strong>
             {selectedCraft.timeTokens > 0 && ` · in transit (${selectedCraft.timeTokens} time token(s))`}
           </p>
+          <div className={styles.inlineActions}>
+            <button
+              type="button"
+              disabled={!canCollectSample().ok}
+              title={canCollectSample().reason}
+              onClick={collectSample}
+            >
+              Collect Sample
+            </button>
+          </div>
           <ul className={styles.routeList}>
             {maneuvers.length === 0 && (
               <li className={styles.empty}>No legal routes from this location.</li>

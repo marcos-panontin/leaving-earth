@@ -31,6 +31,7 @@ export type AdvancementId =
   | 'surveying';
 export type GamePhase = 'setup' | 'yearStart' | 'playing' | 'turnEnd' | 'yearEnd' | 'gameOver';
 export type GameDifficulty = 'easy' | 'normal' | 'hard' | 'veryHard';
+export type OutcomeCardType = 'success' | 'minorFailure' | 'majorFailure';
 
 export interface ComponentDefinition {
   id: string;
@@ -126,6 +127,7 @@ export interface ComponentInstance {
   damaged: boolean;
   location: 'supply' | 'inventory' | 'spacecraft';
   spacecraftId?: string;
+  sampleSourceLocationId?: string;
 }
 
 export interface AstronautInstance {
@@ -134,6 +136,7 @@ export interface AstronautInstance {
   incapacitated: boolean;
   spacecraftId?: string;
   capsuleInstanceId?: string;
+  visitedLocationIds: string[];
 }
 
 export interface Spacecraft {
@@ -147,8 +150,8 @@ export interface Spacecraft {
 
 export interface ResearchedAdvancement {
   advancementId: AdvancementId;
-  outcomeCardIds: string[];
-  revealedOutcomeIds: string[];
+  outcomeCards: OutcomeCardType[];
+  revealedOutcomeCards: OutcomeCardType[];
 }
 
 export interface ActiveMission {
@@ -177,6 +180,8 @@ export interface GameState {
   astronauts: AstronautInstance[];
   spacecraft: Spacecraft[];
   advancements: ResearchedAdvancement[];
+  outcomeDeck: OutcomeCardType[];
+  outcomeDiscard: OutcomeCardType[];
   supplyCounts: Record<string, number>;
   log: string[];
 }

@@ -32,6 +32,21 @@ export function ShopPanel() {
             );
           })}
         </div>
+        <ul className={styles.advancementState}>
+          {state.advancements.length === 0 && <li>No researched advancements yet.</li>}
+          {state.advancements.map((advancement) => {
+            const def = ADVANCEMENTS.find((entry) => entry.id === advancement.advancementId);
+            if (!def) return null;
+            const success = advancement.outcomeCards.filter((card) => card === 'success').length;
+            const minor = advancement.outcomeCards.filter((card) => card === 'minorFailure').length;
+            const major = advancement.outcomeCards.filter((card) => card === 'majorFailure').length;
+            return (
+              <li key={advancement.advancementId}>
+                <strong>{def.name}:</strong> {advancement.outcomeCards.length} cards ({success}✓ / {minor}m / {major}M)
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className={styles.section}>

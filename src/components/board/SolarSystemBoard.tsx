@@ -6,19 +6,15 @@ import styles from './SolarSystemBoard.module.css';
 export function SolarSystemBoard() {
   const spacecraft = useGameStore((s) => s.state.spacecraft);
 
-  const countAt = (locationId: string) =>
-    spacecraft.filter((craft) => craft.locationId === locationId).length;
+  const spacecraftAt = (locationId: string) =>
+    spacecraft.filter((craft) => craft.locationId === locationId);
 
   return (
     <section className={styles.board}>
       <h2 className={styles.title}>Solar System</h2>
       <div className={styles.grid}>
         {FIXED_LOCATIONS.map((location) => (
-          <LocationCard
-            key={location.id}
-            location={location}
-            spacecraftCount={countAt(location.id)}
-          />
+          <LocationCard key={location.id} location={location} spacecraft={spacecraftAt(location.id)} />
         ))}
       </div>
     </section>
