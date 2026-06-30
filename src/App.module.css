@@ -1,27 +1,270 @@
 .app {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 320px;
-  gap: 1rem;
-  padding: 1rem;
-  background: #020617;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top left, rgba(252, 211, 77, 0.3), transparent 34rem),
+    radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.28), transparent 32rem),
+    linear-gradient(135deg, #042f2e 0%, #064e3b 42%, #021b14 100%);
   color: #f8fafc;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.sidebar,
-.rightbar,
-.main {
+.hero {
+  width: min(1180px, 100%);
+  margin: 0 auto 1.5rem;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 7vw, 5.6rem);
+  line-height: 0.92;
+  text-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.28);
+}
+
+.subtitle {
+  max-width: 46rem;
+  margin: 1rem 0 0;
+  color: #d1fae5;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.6;
+}
+
+.resetButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.9rem 1.3rem;
+  background: #facc15;
+  color: #052e16;
+  font: inherit;
+  font-weight: 900;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.resetButton:hover,
+.resetButton:focus-visible {
+  background: #fde047;
+  outline: 0.2rem solid rgba(250, 204, 21, 0.4);
+  outline-offset: 0.2rem;
+}
+
+.gameShell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 2rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background: rgba(2, 44, 34, 0.72);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(1rem);
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.scoreboard div {
+  border-radius: 1.25rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #bbf7d0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.scoreboard span {
+  display: block;
+  color: #ffffff;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  line-height: 1;
+}
+
+.winBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  background: rgba(250, 204, 21, 0.16);
+  color: #fef9c3;
 }
 
-.main {
-  min-width: 0;
+.winBanner strong {
+  color: #ffffff;
+  font-size: 1.1rem;
 }
 
-@media (max-width: 1100px) {
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.card {
+  aspect-ratio: 3 / 4;
+  border: 0;
+  border-radius: 1.35rem;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  perspective: 70rem;
+}
+
+.card:disabled {
+  cursor: default;
+}
+
+.card:not(:disabled):hover .cardInner,
+.card:not(:disabled):focus-visible .cardInner {
+  transform: translateY(-0.25rem) rotateY(0deg);
+  box-shadow: 0 1rem 2.3rem rgba(0, 0, 0, 0.36);
+}
+
+.card:focus-visible {
+  outline: 0.22rem solid #facc15;
+  outline-offset: 0.18rem;
+}
+
+.cardInner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition:
+    transform 0.4s ease,
+    box-shadow 0.25s ease;
+  transform-style: preserve-3d;
+  box-shadow: 0 0.7rem 1.7rem rgba(0, 0, 0, 0.25);
+}
+
+.faceUp .cardInner,
+.matched .cardInner {
+  transform: rotateY(180deg);
+}
+
+.cardBack,
+.cardFront {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  border-radius: 1.35rem;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+.cardBack {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.7rem;
+  border: 0.25rem solid #facc15;
+  background:
+    linear-gradient(135deg, transparent 44%, #facc15 44% 56%, transparent 56%),
+    linear-gradient(45deg, #16a34a, #15803d);
+  color: #ffffff;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.badge {
+  display: grid;
+  width: 4.4rem;
+  height: 4.4rem;
+  place-items: center;
+  border: 0.28rem solid #fef08a;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fef08a;
+  letter-spacing: 0;
+}
+
+.cardFront {
+  flex-direction: column;
+  justify-content: flex-end;
+  background: #052e16;
+  transform: rotateY(180deg);
+}
+
+.cardFront img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playerInfo {
+  position: relative;
+  display: grid;
+  gap: 0.15rem;
+  padding: 4rem 0.9rem 0.9rem;
+  background: linear-gradient(transparent, rgba(2, 6, 23, 0.88) 44%);
+  text-align: left;
+}
+
+.playerInfo strong {
+  font-size: clamp(0.95rem, 2vw, 1.22rem);
+  line-height: 1.1;
+}
+
+.playerInfo span {
+  color: #dcfce7;
+  font-size: clamp(0.72rem, 1.4vw, 0.9rem);
+}
+
+.matched .cardFront {
+  box-shadow: inset 0 0 0 0.28rem #facc15;
+}
+
+@media (max-width: 760px) {
   .app {
+    padding: 1rem;
+  }
+
+  .hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scoreboard {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardInner,
+  .card:not(:disabled):hover .cardInner,
+  .card:not(:disabled):focus-visible .cardInner {
+    transition: none;
   }
 }
